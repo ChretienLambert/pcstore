@@ -3,7 +3,8 @@ import { IoMdClose } from "react-icons/io"
 import {HiOutlineUser, HiOutlineShoppingBag, HiBars3BottomRight,} from "react-icons/hi2"
 import Searchbar from "./Searchbar"
 import CartDrawer from "../Layout/CartDrawer"
-import {useState} from 'react'
+import { useState } from "react"
+
 const Navbar = () => {
     const [drawerOpen, setDrawerOpen]= useState(false)
     const [navdraweropen, setnavdraweropen]= useState(false)
@@ -20,9 +21,7 @@ const Navbar = () => {
         <Link to="/" className="text-1xl">PCSTORE</Link>
       </div>
         <div className="hidden md:flex text-sm space-x-10">
-            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">LAPTOP</Link>
-            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">MACBOOK</Link>
-            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">GAMING LAPTOP</Link>
+            <Link to="/collections/all" className="text-black hover:text-blue-500 text-sm font-medium">LAPTOP</Link>
             <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">Contact Us</Link>
             <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">About Us</Link>
         </div>
@@ -57,8 +56,9 @@ const Navbar = () => {
           <div className="p-4">
             <h2 className="text-xl font-semibold mb-4">Menu</h2>
             <nav className="space-y-4">
-              <Link to="#" onClick={togglenavdrawer} className="block text-gray-600 hover:text-blue-500">PC</Link>
-              <Link to="#" onClick={togglenavdrawer} className="block text-gray-600 hover:text-blue-500">LAPTOP</Link>
+              <Link to="/collections/all" onClick={togglenavdrawer} className="block text-gray-600 hover:text-blue-500">LAPTOP</Link>
+              <Link to="#" onClick={togglenavdrawer} className="block text-gray-600 hover:text-blue-500">CONTACT US</Link>
+              <Link to="#" onClick={togglenavdrawer} className="block text-gray-600 hover:text-blue-500">ABOUT US</Link>
             </nav>
           </div>
         </div>
