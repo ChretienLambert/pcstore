@@ -7,7 +7,7 @@ const MyOrdersPage = () => {
     setTimeout(() => {
       const mockOrders = [
         {
-          id: "12345",
+          _id: "12345",
           createdAt: new Date(),
           shippingAddress: { city: "Douala", country: "Cameroon" },
           orderItems: [{ name: "Product 1", image: "kjh" }],
@@ -15,7 +15,7 @@ const MyOrdersPage = () => {
           isPaid: true,
         },
         {
-          id: "67890",
+           _id: "67890",
           createdAt: new Date(),
           shippingAddress: { city: "Yaoundé", country: "Cameroon" },
           orderItems: [{ name: "Product 2", image: "xyz" }],
@@ -46,13 +46,13 @@ const MyOrdersPage = () => {
                 <tbody>
                     {orders.length >0 ? (
                         orders.map((order)=>(
-                            <tr key={order.id} className="border-b hover:border-gray-50 cursor-pointer">
+                            <tr key={order._id} className="border-b hover:border-gray-50 cursor-pointer">
                                 <td className="py-2 px-2 sm:py-4 sm:px-4">
                                     <img src={order.orderItems[0].image} alt={order.orderItems[0].name} className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg"/>
                                 </td>
                                 <td className="py-2 px-2 sm:py-4 sm:px-4 font-medium text-gray-900 whitespace-nowrap">
                                 <td className="py-2 px-2 sm:py-4 sm:px-4">
-                                    #{order.id}
+                                    #{order._id}
                                 </td >
                                     
                                 </td>

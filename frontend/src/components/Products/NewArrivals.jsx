@@ -15,21 +15,21 @@ const NewArrivals = () => {
   const [scrollLeft, setScrollLeft] = useState(0)
 
   const newArrival = [
-    { id: "1", 
+    { _id: "1", 
     name: "DELL", 
     price: "500000 FCFA", 
     images: [Dellimage] },
-    { id: "2", 
+    { _id: "2", 
       name: "ASUS", 
       price: "800000 FCFA", 
       images: [Asusimage] 
     },
-    { id: "3",
+    { _id: "3",
       name: "HP", 
       price: "600000 FCFA", 
       images: [Hpimage] 
     },
-    { id: "4",
+    { _id: "4",
       name: "MacBook Air",
       price: "300000 FCFA", 
       images: [Macbookimage] }
@@ -127,7 +127,7 @@ const NewArrivals = () => {
       >
         {newArrival.map((product) => (
           <div
-            key={product.id}
+            key={product._id}
             className="min-w-[100%] sm:min-w-[50%] lg:min-w-[30%] relative"
           >
             <img
@@ -136,7 +136,7 @@ const NewArrivals = () => {
               className="w-full h-64 object-cover rounded-lg"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-4 rounded-b-lg">
-              <Link to={`/product/${product.id}`} className="block">
+              <Link to={`/product/${product._id}`} className="block">
                 <h4 className="font-medium">{product.name}</h4>
                 <p className="mt-1">{product.price}</p>
               </Link>

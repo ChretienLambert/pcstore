@@ -22,8 +22,8 @@ const Navbar = () => {
       </div>
         <div className="hidden md:flex text-sm space-x-10">
             <Link to="/collections/all" className="text-black hover:text-blue-500 text-sm font-medium">LAPTOP</Link>
-            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">Contact Us</Link>
-            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">About Us</Link>
+            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">CONTACT US</Link>
+            <Link to="#" className="text-black hover:text-blue-500 text-sm font-medium">ABOUT US</Link>
         </div>
         
         <div className="flex items-center space-x-4">
