@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import {Toaster} from "sonner"
 import UserLayout from './components/Layout/UserLayout'
 import Home from "./pages/Home"
 import Login from './pages/Login'
@@ -10,6 +11,7 @@ import ProductDetails from './components/Products/ProductDetails'
 const App = () => {
   return (
    <BrowserRouter>
+   <Toaster position="top-right"></Toaster>
    <Routes>
     {/* USERLAYOUT */}
     <Route path="/" element={<UserLayout />}>
