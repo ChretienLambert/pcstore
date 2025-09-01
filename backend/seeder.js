@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Product = require("./models/Product");
-const User = require("./models/user");
+const User = require("./models/User");
+const Cart = require("./models/Cart");
 const products = require("./data/products");
 
 dotenv.config();
@@ -9,7 +10,9 @@ dotenv.config();
 // pick up either env name
 const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 if (!mongoUri) {
-  console.error("MONGO_URI / MONGODB_URI is not set. Add it to .env or export it.");
+  console.error(
+    "MONGO_URI / MONGODB_URI is not set. Add it to .env or export it."
+  );
   process.exit(1);
 }
 
@@ -31,6 +34,7 @@ const seedData = async () => {
     //Clear existing data
     await Product.deleteMany();
     await User.deleteMany();
+    await Cart.deleteMany();
 
     //Create a default admin user
     const createdUser = await User.create({
