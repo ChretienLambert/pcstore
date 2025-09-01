@@ -8,22 +8,26 @@ import Profile from './pages/Profile'
 import CollectionPage from './pages/CollectionPage'
 import ProductDetails from './components/Products/ProductDetails'
 import Checkout from './components/Cart/Checkout'
+import OrderConfirmation from './pages/OrderConfirmation'
+import OrderDetailsPage from './pages/OrderDetailsPage'
+import MyOrdersPage from './pages/MyOrdersPage'
 
 const App = () => {
   return (
    <BrowserRouter>
    <Toaster position="top-right"></Toaster>
    <Routes>
-    {/* USERLAYOUT */}
     <Route path="/" element={<UserLayout />}>
     <Route path="profile" element={<Profile />} />
     <Route index element={<Home />}/>
     <Route path="login" element={<Login />}/>
     <Route path="collections/:collection" element={<CollectionPage />}/>
     <Route path="product/:id" element={<ProductDetails/>}/>
-    {/*Register*/}
     <Route path="Register" element={<Register />} />
     <Route path="checkout" element={<Checkout />}/>
+    <Route path='order-confirmation' element={<OrderConfirmation />}/>
+    <Route path="order/:id" element={<OrderDetailsPage/>} />
+    <Route path="my-orders" element={<MyOrdersPage/>}/>
     </Route>
    </Routes>
    </BrowserRouter>
