@@ -28,6 +28,7 @@ const Navbar = () => {
         
         <div className="flex items-center space-x-4">
 
+          <Link to="/admin" className="block bg-black px-2 text-white rounded">Admin</Link>
           <Link to="/profile" className="hover:text-blue-500">
             <HiOutlineUser className="h-6 w-6 text-black hover:text-blue-500"></HiOutlineUser>
           </Link>
