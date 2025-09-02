@@ -4,7 +4,6 @@ const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
 const router = express.Router();
-require("dotenv").config();
 
 //Cloudinary Configuration
 cloudinary.config({

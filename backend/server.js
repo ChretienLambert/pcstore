@@ -12,6 +12,8 @@ const subscribeRoutes = require("./routes/subscribeRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const productAdminRoutes = require("./routes/productAdminRoutes");
 const adminOrderRoutes = require("./routes/adminOrderRoutes");
+const pcBuildRoutes = require("./routes/pcBuildRoutes");
+const adminPcBuildRoutes = require("./routes/adminPcBuildRoutes");
 
 dotenv.config();
 connectDB();
@@ -30,11 +32,13 @@ app.use("/api/checkout", checkoutRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/subscribe", subscribeRoutes);
+app.use("/api/pc-builds", pcBuildRoutes);
 
 //Admin
 app.use("/api/admin/users", adminRoutes);
 app.use("/api/admin/products", productAdminRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
+app.use("/api/admin/pc-builds", adminPcBuildRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

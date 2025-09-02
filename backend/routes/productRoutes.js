@@ -134,7 +134,7 @@ router.put("/:id", protect, admin, async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
@@ -156,7 +156,7 @@ router.delete("/:id", protect, admin, async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
@@ -182,11 +182,29 @@ router.get("/", async (req, res) => {
     let query = {};
 
     // Filter logic (fixed typos and robust parsing)
-    if (collection && collection.toLowerCase() !== "all") {
-      query.collections = collection;
+    if (collection) {
+      if (Array.isArray(collection)) {
+        // If multiple collections are provided as array
+        query.collection = { $in: collection };
+      } else if (
+        typeof collection === "string" &&
+        collection.toLowerCase() !== "all"
+      ) {
+        // If single collection is provided as string
+        query.collection = collection;
+      }
     }
-    if (category && category.toLowerCase() !== "all") {
-      query.category = category;
+    if (category) {
+      if (Array.isArray(category)) {
+        // If multiple categories are provided as array
+        query.category = { $in: category };
+      } else if (
+        typeof category === "string" &&
+        category.toLowerCase() !== "all"
+      ) {
+        // If single category is provided as string
+        query.category = category;
+      }
     }
     if (material) {
       query.material = { $in: material.split(",").map((m) => m.trim()) };
@@ -266,7 +284,7 @@ router.get("/", async (req, res) => {
     res.json(products);
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(500).json({ message: "Server Error" });
   }
 });
 //access GET /api/products/new-arrivals
@@ -313,7 +331,7 @@ router.get("/:id", async (req, res) => {
     }
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(500).json({ message: "Server Error" });
   }
 });
 //@route GET /api/product/similar/:id
@@ -334,7 +352,7 @@ router.get("/similar/:id", async (req, res) => {
     res.json(similarProducts);
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(500).json({ message: "Server Error" });
   }
 });
 

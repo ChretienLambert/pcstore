@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const checkoutItemSchema = new mongoose.Schema(
   {
     productId: {
-      type: mongoose.Schema.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
       required: true,
     },
@@ -13,7 +13,7 @@ const checkoutItemSchema = new mongoose.Schema(
     },
     image: {
       type: String,
-      required: true,
+      default: "", // Make it optional with default value
     },
     price: {
       type: Number,
@@ -51,15 +51,44 @@ const checkoutSchema = new mongoose.Schema(
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
     paymentStatus: {
-      type: mongoose.Schema.Types.Mixed,
+      type: String,
       default: "pending",
     },
-    paymentDetails: { type: mongoose.Schema.Types.Mixed }, // store provider response, txn id, etc.
+    paymentDetails: { type: mongoose.Schema.Types.Mixed },
     // finalization fields
     isFinalized: { type: Boolean, default: false },
     finalizedAt: { type: Date },
+    // PC build reference
+    pcBuildId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PcBuild",
+    },
+    isPcBuildCheckout: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+// In models/Checkout.js, add this pre-save hook
+checkoutSchema.pre("save", function (next) {
+  // Validate that checkoutItems total matches totalPrice
+  if (this.isModified("checkoutItems") || this.isModified("totalPrice")) {
+    const calculatedTotal = this.checkoutItems.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+
+    // Allow small rounding differences
+    if (Math.abs(calculatedTotal - this.totalPrice) > 0.01) {
+      return next(
+        new Error(
+          `Checkout total ${this.totalPrice} does not match items total ${calculatedTotal}`
+        )
+      );
+    }
+  }
+  next();
+});
 
 module.exports = mongoose.model("Checkout", checkoutSchema);
