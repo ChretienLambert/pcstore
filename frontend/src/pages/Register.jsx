@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import register from "../assets/register.jpg"
+import { registerUser } from "../redux/slices/authSlice";
+import {useDispatch} from "react-redux"
 
 export default function Register() {
   const [name, setName]=useState("")  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const dispatch=useDispatch()
   const navigate = useNavigate();
 
   const handleRegister = (e) => {
     e.preventDefault();
     console.log("User Registered: ", {name,email,password})
+    dispatch(registerUser({name,email,password}))
 
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
@@ -22,7 +26,7 @@ export default function Register() {
 
    
     alert("Registration successful! Please login.");
-    navigate("/login");
+    
   };
 
   return (
