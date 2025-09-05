@@ -46,6 +46,26 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      enum: [
+        "Laptops",
+        "Mini PC",
+        "Desktops",
+        "All-in-One",
+        "Workstations",
+        "cpu",
+        "gpu",
+        "ram",
+        "storage",
+        "motherboard",
+        "psu",
+        "case",
+        "cooling",
+        "monitor",
+        "keyboard",
+        "mouse",
+        "headset",
+        "accessories",
+      ],
     },
     brand: {
       type: String,
@@ -171,6 +191,10 @@ const productSchema = new mongoose.Schema(
         enum: ["kg", "g", "lb", "oz"],
       },
     },
+    specifications: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+    },
   },
   {
     timestamps: true,
@@ -179,19 +203,19 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// // Virtual for checking if product is in stock
-// productSchema.virtual('inStock').get(function() {
-//     return this.countInStock > 0;
-// });
+// Virtual for checking if product is in stock
+productSchema.virtual("inStock").get(function () {
+  return this.countInStock > 0;
+});
 
-// // Virtual for current price (considering discount)
-// productSchema.virtual('currentPrice').get(function() {
-//     return this.discountPrice || this.price;
-// });
+// Virtual for current price (considering discount)
+productSchema.virtual("currentPrice").get(function () {
+  return this.discountPrice || this.price;
+});
 
-// // Index for better performance on common queries
-// productSchema.index({ category: 1, isPublished: 1 });
-// productSchema.index({ brand: 1, isPublished: 1 });
-// productSchema.index({ sku: 1 }, { unique: true });
+// Index for better performance on common queries
+productSchema.index({ category: 1, isPublished: 1 });
+productSchema.index({ brand: 1, isPublished: 1 });
+productSchema.index({ sku: 1 }, { unique: true });
 
 module.exports = mongoose.model("Product", productSchema);

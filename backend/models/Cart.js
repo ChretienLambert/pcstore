@@ -5,17 +5,27 @@ const cartItemSchema = new mongoose.Schema(
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true,
+      required: function () {
+        // Only require productId if it's not a PC build
+        return !this.isPcBuild;
+      },
     },
     name: String,
     image: String,
-    price: String,
-    size: String,
+    price: Number,
     size: String,
     color: String,
     quantity: {
       type: Number,
       default: 1,
+    },
+    pcBuildId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PcBuild",
+    },
+    isPcBuild: {
+      type: Boolean,
+      default: false,
     },
   },
   { _id: false }

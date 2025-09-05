@@ -1,8 +1,8 @@
 const express = require("express");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
+const PcBuild = require("../models/PcBuild");
 const { protect } = require("../middleware/authMiddleware");
-const { get } = require("mongoose");
 
 const router = express.Router();
 
@@ -210,7 +210,7 @@ router.post("/merge", protect, async (req, res) => {
             userCart.products.push(guestItem);
           }
         });
-        userCart.totalPrice = userCart.products.reduct(
+        userCart.totalPrice = userCart.products.reduce(
           (acc, item) => acc + item.price * item.quantity,
           0
         );
@@ -240,6 +240,109 @@ router.post("/merge", protect, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// @route POST /api/cart/pc-build
+// @desc Add a PC build to the cart
+// @access Private
+router.post("/pc-build", protect, async (req, res) => {
+  const { pcBuildId, quantity = 1 } = req.body;
+
+  try {
+    const pcBuild = await PcBuild.findById(pcBuildId).populate(
+      "components.productId"
+    );
+
+    if (!pcBuild) {
+      return res.status(404).json({ message: "PC Build not found" });
+    }
+
+    // Check if user owns the build or it's public
+    if (
+      pcBuild.user.toString() !== req.user._id.toString() &&
+      !pcBuild.isPublic
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to add this build to cart" });
+    }
+
+    // Calculate total price of the build
+    const buildTotalPrice = pcBuild.components.reduce((total, component) => {
+      return total + (component.productId?.price || 0) * component.quantity;
+    }, 0);
+
+    let cart = await Cart.findOne({ user: req.user._id });
+
+    // Get a representative image from the build components
+    let buildImage = "";
+    if (
+      pcBuild.components.length > 0 &&
+      pcBuild.components[0].productId?.images?.length > 0
+    ) {
+      buildImage = pcBuild.components[0].productId.images[0].url;
+    }
+
+    if (cart) {
+      // Check if this PC build is already in the cart
+      const existingBuildIndex = cart.products.findIndex(
+        (item) => item.pcBuildId && item.pcBuildId.toString() === pcBuildId
+      );
+
+      if (existingBuildIndex > -1) {
+        // Update quantity if already exists
+        cart.products[existingBuildIndex].quantity += quantity;
+      } else {
+        // Add new PC build to cart - don't include productId for PC builds
+        cart.products.push({
+          pcBuildId: pcBuild._id,
+          name: pcBuild.name,
+          image: buildImage,
+          price: buildTotalPrice,
+          quantity: quantity,
+          isPcBuild: true,
+          // Note: productId is intentionally omitted for PC builds
+        });
+      }
+    } else {
+      // Create new cart with PC build - don't include productId for PC builds
+      cart = new Cart({
+        user: req.user._id,
+        products: [
+          {
+            pcBuildId: pcBuild._id,
+            name: pcBuild.name,
+            image: buildImage,
+            price: buildTotalPrice,
+            quantity: quantity,
+            isPcBuild: true,
+            // Note: productId is intentionally omitted for PC builds
+          },
+        ],
+        totalPrice: buildTotalPrice * quantity,
+      });
+    }
+
+    // Recalculate total price
+    cart.totalPrice = cart.products.reduce(
+      (acc, item) => acc + (item.price || 0) * item.quantity,
+      0
+    );
+
+    await cart.save();
+    await cart.populate({
+      path: "products.pcBuildId",
+      select: "name components", // explicitly select only needed fields
+      options: {
+        virtuals: false, // disable virtuals during population
+      },
+    });
+
+    res.json(cart);
+  } catch (error) {
+    console.error("Error adding PC build to cart:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
