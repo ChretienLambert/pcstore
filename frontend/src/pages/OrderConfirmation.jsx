@@ -52,7 +52,9 @@ const OrderConfirmation = () => {
           <div className="flex justify-between mb-20">
             {/* Order Id and Date */}
             <div>
-              <h2 className="text-xl font-semibold">Order ID: {checkout._id}</h2>
+              <h2 className="text-xl font-semibold">
+                Order ID: {checkout._id}
+              </h2>
               <p className="text-gray-500">
                 Order date: {new Date(checkout.createdAt).toLocaleDateString()}
               </p>
@@ -61,7 +63,8 @@ const OrderConfirmation = () => {
             {/* Estimated Delivery */}
             <div>
               <p className="text-emerald-700 text-sm">
-                Estimated Delivery: {calculateEstimatedDelivery(checkout.createdAt)}
+                Estimated Delivery:{" "}
+                {calculateEstimatedDelivery(checkout.createdAt)}
               </p>
             </div>
           </div>
@@ -100,9 +103,12 @@ const OrderConfirmation = () => {
             {/* Delivery Info */}
             <div>
               <h4 className="text-lg font-semibold mb-2">Delivery</h4>
-              <p className="text-gray-600">{checkout.shippingAddress.address}</p>
               <p className="text-gray-600">
-                {checkout.shippingAddress.city}, {checkout.shippingAddress.country}
+                {checkout.shippingAddress.address}
+              </p>
+              <p className="text-gray-600">
+                {checkout.shippingAddress.city},{" "}
+                {checkout.shippingAddress.country}
               </p>
             </div>
           </div>
@@ -123,4 +129,3 @@ const OrderConfirmation = () => {
 };
 
 export default OrderConfirmation;
-

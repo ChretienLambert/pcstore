@@ -1,96 +1,94 @@
-import Dellimage from "../../assets/7.jpg"
-import Asusimage from "../../assets/9.jpg"
-import Hpimage from "../../assets/8.jpg"
-import Macbookimage from "../../assets/6.jpg"
-import { useRef, useState, useEffect } from "react"
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi"
-import { Link } from "react-router-dom"
+import Dellimage from "../../assets/7.jpg";
+import Asusimage from "../../assets/9.jpg";
+import Hpimage from "../../assets/8.jpg";
+import Macbookimage from "../../assets/6.jpg";
+import { useRef, useState, useEffect } from "react";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 const NewArrivals = () => {
-  const scrollref = useRef(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
-  const [isDragging, setIsDragging] = useState(false)
-  const [startX, setStartX] = useState(0)
-  const [scrollLeft, setScrollLeft] = useState(0)
+  const scrollref = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   const newArrival = [
-    { _id: "1", 
-    name: "DELL", 
-    price: "500000 FCFA", 
-    images: [Dellimage] },
-    { _id: "2", 
-      name: "ASUS", 
-      price: "800000 FCFA", 
-      images: [Asusimage] 
-    },
-    { _id: "3",
-      name: "HP", 
-      price: "600000 FCFA", 
-      images: [Hpimage] 
-    },
-    { _id: "4",
+    { _id: "1", name: "DELL", price: "500000 FCFA", images: [Dellimage] },
+    { _id: "2", name: "ASUS", price: "800000 FCFA", images: [Asusimage] },
+    { _id: "3", name: "HP", price: "600000 FCFA", images: [Hpimage] },
+    {
+      _id: "4",
       name: "MacBook Air",
-      price: "300000 FCFA", 
-      images: [Macbookimage] }
-  ]
+      price: "300000 FCFA",
+      images: [Macbookimage],
+    },
+  ];
 
   const handleMouseDown = (e) => {
-    setIsDragging(true)
-    setStartX(e.pageX - scrollref.current.offsetLeft)
-    setScrollLeft(scrollref.current.scrollLeft)
-  }
+    setIsDragging(true);
+    setStartX(e.pageX - scrollref.current.offsetLeft);
+    setScrollLeft(scrollref.current.scrollLeft);
+  };
 
   const handleMouseMove = (e) => {
-    if (!isDragging) return
-    e.preventDefault()
-    const x = e.pageX - scrollref.current.offsetLeft
-    const walk = (x - startX) * 1.5 // scroll speed multiplier
-    scrollref.current.scrollLeft = scrollLeft - walk
-  }
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollref.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // scroll speed multiplier
+    scrollref.current.scrollLeft = scrollLeft - walk;
+  };
 
   const handleMouseUpOrLeave = () => {
-    setIsDragging(false)
-  }
-
+    setIsDragging(false);
+  };
 
   // Scroll function
   const scroll = (direction) => {
-    const scrollAmount = direction === "left" ? -300 : 300
-    scrollref.current.scrollBy({ left: scrollAmount, behavior: "smooth" })
-  }
+    const scrollAmount = direction === "left" ? -300 : 300;
+    scrollref.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+  };
 
   // Check scroll positions
   const updateScrollButtons = () => {
-    const container = scrollref.current
+    const container = scrollref.current;
     if (container) {
-      const leftScroll = container.scrollLeft
-      const maxScroll = container.scrollWidth - container.clientWidth
+      const leftScroll = container.scrollLeft;
+      const maxScroll = container.scrollWidth - container.clientWidth;
 
-      setCanScrollLeft(leftScroll > 0)
-      setCanScrollRight(leftScroll < maxScroll)
+      setCanScrollLeft(leftScroll > 0);
+      setCanScrollRight(leftScroll < maxScroll);
     }
-  }
-
+  };
 
   useEffect(() => {
-    const container = scrollref.current
+    const container = scrollref.current;
     if (container) {
-      container.addEventListener("scroll", updateScrollButtons)
-      updateScrollButtons()
+      container.addEventListener("scroll", updateScrollButtons);
+      updateScrollButtons();
     }
     return () => {
       if (container) {
-        container.removeEventListener("scroll", updateScrollButtons)
+        container.removeEventListener("scroll", updateScrollButtons);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <section>
-      <div ref={scrollref} className="container mx-auto text-center mb-10 relative" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUpOrLeave} onMouseLeave={handleMouseUpOrLeave}>
+      <div
+        ref={scrollref}
+        className="container mx-auto text-center mb-10 relative"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+      >
         <h2 className="text-3xl font-blue mb-4">Explore New Arrivals</h2>
-        <p className="text-lg text-gray-600 mb-8">Discover the latest Laptops</p>
+        <p className="text-lg text-gray-600 mb-8">
+          Discover the latest Laptops
+        </p>
 
         {/* Button scrolls */}
         <div className="absolute right-0 bottom-[-30px] flex space-x-2">
@@ -145,7 +143,7 @@ const NewArrivals = () => {
         ))}
       </div>
     </section>
-  )
-}
+  );
+};
 
-export default NewArrivals
+export default NewArrivals;

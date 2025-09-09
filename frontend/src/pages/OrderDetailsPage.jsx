@@ -106,7 +106,9 @@ const OrderDetailsPage = () => {
                     </td>
                     <td className="py-2 px-4">{item.price} FCFA</td>
                     <td className="py-2 px-4">{item.quantity}</td>
-                    <td className="py-2 px-4">{item.price * item.quantity} FCFA</td>
+                    <td className="py-2 px-4">
+                      {item.price * item.quantity} FCFA
+                    </td>
                   </tr>
                 ))}
               </tbody>

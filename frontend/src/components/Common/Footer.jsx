@@ -8,7 +8,6 @@ const Footer = () => {
   return (
     <footer className="border-t py-12 bg-white">
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 px-6">
-        
         {/* Newsletter */}
         <div className="md:text-center">
           <h3 className="text-lg text-black mb-4">Newsletter</h3>
