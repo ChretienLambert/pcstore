@@ -1,17 +1,38 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import login from "../assets/login.jpg";
 import { loginUser } from "../redux/slices/authSlice";
-import { useDispatch } from "react-redux";
+import { mergeCart } from "../redux/slices/cartSlice"; 
+import { useDispatch, useSelector } from "react-redux";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const { user, guestId, loading, error } = useSelector((state) => state.auth);
+  const { cart } = useSelector((state) => state.cart);
+
+  // Redirect parameter (e.g. ?redirect=/checkout)
+  const redirect = new URLSearchParams(location.search).get("redirect") || "/";
+  const isCheckoutRedirect = redirect.includes("checkout");
+
+  useEffect(() => {
+    if (user) {
+      if (cart?.products.length > 0 && guestId) {
+        dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
+          navigate(isCheckoutRedirect ? "/checkout" : "/");
+        });
+      } else {
+        navigate(isCheckoutRedirect ? "/checkout" : "/");
+      }
+    }
+  }, [user, guestId, cart, isCheckoutRedirect, dispatch, navigate]);
 
   const handleLogin = (e) => {
     e.preventDefault();
-    console.log("Login Successful: ", { email, password });
     dispatch(loginUser({ email, password }));
   };
 
@@ -27,7 +48,7 @@ export default function Login() {
               <label className="block text-sm mb-1">Email address</label>
               <input
                 type="email"
-                className="w-full px-4 py-2 rounded-lg text-black bg-white  border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 rounded-lg text-black bg-white border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -45,21 +66,30 @@ export default function Login() {
               />
             </div>
 
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="accent-indigo-500" /> Remember
-                me
+                <input type="checkbox" className="accent-indigo-500" /> Remember me
               </label>
-              <Link to="/Register" className="text-blue-300 hover:underline">
-                Don't have an account? Register{""}
+              <Link
+                to={`/register?redirect=${encodeURIComponent(redirect)}`}
+                className="text-blue-300 hover:underline"
+              >
+                Don't have an account? Register
               </Link>
             </div>
 
             <button
               type="submit"
-              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold transition"
+              disabled={loading}
+              className={`w-full py-2 rounded-lg font-semibold transition ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
         </div>
@@ -67,11 +97,7 @@ export default function Login() {
 
       {/* Right Side */}
       <div className="hidden md:block w-1/2">
-        <img
-          src={login}
-          alt="Background"
-          className="w-full h-full object-cover"
-        />
+        <img src={login} alt="Background" className="w-full h-full object-cover" />
       </div>
     </div>
   );

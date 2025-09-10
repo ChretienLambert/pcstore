@@ -1,4 +1,5 @@
 import cheappc2 from "../../assets/cheappc2.jpg";
+import { Link } from "react-router-dom";
 const FeaturedHomePc = () => {
   return (
     <section className="py-16">
@@ -17,9 +18,9 @@ const FeaturedHomePc = () => {
               keep you productive. Perfect for work, study, and home use — all
               at unbeatable prices.
             </p>
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition">
+            <Link to="/collections/all?category=BusinessLaptop" className="px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition">
               Shop PCs Now
-            </button>
+            </Link>
           </div>
 
           {/* Right side - Image */}

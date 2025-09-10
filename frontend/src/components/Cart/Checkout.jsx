@@ -1,35 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 
-const cart = {
-  products: [
-    {
-      productId: 1,
-      name: "PC",
-      size: "",
-      color: "",
-      quantity: 1,
-      price: 200000,
-      material: "IDK",
-      dimension: "12",
-      image: "https//picsum.photos/200?random=1",
-    },
-    {
-      productId: 2,
-      name: "LAPTOP",
-      size: "",
-      color: "",
-      material: "IDK",
-      dimension: "12",
-      quantity: 1,
-      price: 200000,
-      image: "https//picsum.photos/200?random=2",
-    },
-  ],
-  totalPrice: 400000,
-};
+
 const Checkout = () => {
   const navigate = useNavigate();
+  const dispatch=useDispatch()
+  const {cart,loading,error}=useSelector((state)=>state.cart)
+  const {user}=useSelector((state)=>state.auth)
+
   const [shippingAddress, setShippingAddress] = useState({
     firstName: "",
     lastName: "",
@@ -37,6 +16,13 @@ const Checkout = () => {
     city: "",
     phone: "",
   });
+
+  //Ensure cart is loaded before proceeding
+  useEffect(()=>{
+    if(!cart||!cart.products||cart.products.length===0){
+      navigate("/")
+    }
+  },[cart,navigate])
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto py-10 px-6 tracking-tighter">
       {/*Left Part*/}
@@ -48,7 +34,7 @@ const Checkout = () => {
             <label className="block text-gray-700">Email</label>
             <input
               type="email"
-              value="email@example.com"
+              value={user? user.email:""}
               className="w-full p-2 border rounded"
               disabled
             />

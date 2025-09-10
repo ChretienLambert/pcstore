@@ -8,10 +8,15 @@ import {
 import Searchbar from "./Searchbar";
 import CartDrawer from "../Layout/CartDrawer";
 import { useState } from "react";
+import { useSelector } from "react-redux";
 
 const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navdraweropen, setnavdraweropen] = useState(false);
+  const {cart}=useSelector((state)=>state.cart)
+  const {user}=useSelector((state)=>state.auth)
+
+  const cartItemCount=cart?.products?.reduce((total,product)=>total+product.quantity,0)||0
 
   const togglenavdrawer = () => {
     setnavdraweropen(!navdraweropen);
@@ -28,29 +33,36 @@ const Navbar = () => {
       </div>
       <div className="hidden md:flex text-sm space-x-10">
         <Link
-          to="/collections/all"
+          to="/collections/all?category=Laptop"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
           LAPTOP
         </Link>
         <Link
-          to="#"
+          to="/collections/all?category=GamingLaptop"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          CONTACT US
+          GAMING LAPTOP
         </Link>
         <Link
-          to="#"
+          to="/collections/all?category=BusinessLaptop"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          ABOUT US
+          BUSINESS LAPTOP
+        </Link>
+        <Link
+          to="/collections/all?category=MACBOOK"
+          className="text-black hover:text-blue-500 text-sm font-medium"
+        >
+          MACBOOk
         </Link>
       </div>
 
       <div className="flex items-center space-x-4">
-        <Link to="/admin" className="block bg-black px-2 text-white rounded">
-          Admin
-        </Link>
+        {user && user.role==="admin" &&(<Link to="/admin" className="block bg-black px-2 text-white rounded">
+          ADMIN
+        </Link>)}
+        
         <Link to="/profile" className="hover:text-blue-500">
           <HiOutlineUser className="h-6 w-6 text-black hover:text-blue-500"></HiOutlineUser>
         </Link>
@@ -58,10 +70,9 @@ const Navbar = () => {
           onClick={toggleCartDrawer}
           className="relative hover:text-blue-500"
         >
-          <HiOutlineShoppingBag className="h-6 w-6 text-black hover:text-blue-500"></HiOutlineShoppingBag>
-          <span className="absolute -top-1 bg-red-500 text-white rounded-full text-xs px-2 py-0.5">
-            4
-          </span>
+          <HiOutlineShoppingBag className="h-6 w-6 text-black hover:text-blue-500 cursor-pointer"></HiOutlineShoppingBag>
+          {cartItemCount>0&&(<span className="absolute -top-1 bg-red-500 text-white rounded-full text-xs px-2 py-0.5">
+          {cartItemCount}</span>)}
         </button>
 
         {/* search function */}
@@ -89,25 +100,32 @@ const Navbar = () => {
           <h2 className="text-xl font-semibold mb-4">Menu</h2>
           <nav className="space-y-4">
             <Link
-              to="/collections/all"
+              to="/collections/all?category=Laptop"
               onClick={togglenavdrawer}
               className="block text-gray-600 hover:text-blue-500"
             >
               LAPTOP
             </Link>
             <Link
-              to="#"
+              to="/collections/all?category=GamingLaptop"
               onClick={togglenavdrawer}
               className="block text-gray-600 hover:text-blue-500"
             >
-              CONTACT US
+              GAMING LAPTOP
             </Link>
             <Link
-              to="#"
+              to="/collections/all?category=BusinessLaptop"
               onClick={togglenavdrawer}
               className="block text-gray-600 hover:text-blue-500"
             >
-              ABOUT US
+              BUSINESS LAPTOP
+            </Link>
+            <Link
+              to="/collections/all?category=BusinessLaptop"
+              onClick={togglenavdrawer}
+              className="block text-gray-600 hover:text-blue-500"
+            >
+              MACBOOK
             </Link>
           </nav>
         </div>

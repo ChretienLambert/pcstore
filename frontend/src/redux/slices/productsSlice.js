@@ -68,6 +68,7 @@ export const updateProduct = createAsyncThunk(
   }
 );
 
+
 // Async thunk to fetch similar products
 export const fetchSimilarProducts = createAsyncThunk(
   "products/fetchSimilarProducts",
@@ -132,6 +133,7 @@ const productsSlice = createSlice({
         state.loading = false;
         state.error = action.error.message;
       })
+      
       // Handle fetching single product details
       .addCase(fetchSingleProduct.pending, (state) => {
         state.loading = true;

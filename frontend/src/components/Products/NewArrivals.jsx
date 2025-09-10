@@ -1,10 +1,7 @@
-import Dellimage from "../../assets/7.jpg";
-import Asusimage from "../../assets/9.jpg";
-import Hpimage from "../../assets/8.jpg";
-import Macbookimage from "../../assets/6.jpg";
 import { useRef, useState, useEffect } from "react";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import axios from "axios"
 
 const NewArrivals = () => {
   const scrollref = useRef(null);
@@ -14,17 +11,21 @@ const NewArrivals = () => {
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const newArrival = [
-    { _id: "1", name: "DELL", price: "500000 FCFA", images: [Dellimage] },
-    { _id: "2", name: "ASUS", price: "800000 FCFA", images: [Asusimage] },
-    { _id: "3", name: "HP", price: "600000 FCFA", images: [Hpimage] },
-    {
-      _id: "4",
-      name: "MacBook Air",
-      price: "300000 FCFA",
-      images: [Macbookimage],
-    },
-  ];
+  const [newArrivals,setnewArrivals]=useState([])
+
+  useEffect(()=>{
+    const fetchNewArrivals=async()=>{
+      try{
+        const response=await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/products/new-arrivals`
+        )
+        setnewArrivals(response.data)
+      } catch(error){
+        console.error(error)
+      }
+    }
+    fetchNewArrivals()
+  },[])
 
   const handleMouseDown = (e) => {
     setIsDragging(true);
@@ -73,7 +74,7 @@ const NewArrivals = () => {
         container.removeEventListener("scroll", updateScrollButtons);
       }
     };
-  }, []);
+  }, [newArrivals]);
 
   return (
     <section>
@@ -123,7 +124,7 @@ const NewArrivals = () => {
         ref={scrollref}
         className="container mx-auto overflow-x-scroll flex space-x-6 relative scroll-smooth"
       >
-        {newArrival.map((product) => (
+        {newArrivals.map((product) => (
           <div
             key={product._id}
             className="min-w-[100%] sm:min-w-[50%] lg:min-w-[30%] relative"

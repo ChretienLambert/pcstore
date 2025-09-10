@@ -1,40 +1,30 @@
 import { useEffect, useState } from "react";
-import {
-  HiOutlineCreditCard,
-  HiArrowPathRoundedSquare,
-  HiShoppingBag,
-} from "react-icons/hi2";
+import {HiOutlineCreditCard,HiArrowPathRoundedSquare,HiShoppingBag,} from "react-icons/hi2";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-const selectedProduct = {
-  name: "DELL BUSINESS PC",
-  price: 400000,
-  originalPrice: 450000,
-  description: "Business Pc",
-  brand: "DELL",
-  material: "Plastic",
-  sizes: ["Compact", "Standard", "Large"],
-  colors: ["Red", "Blue", "Black", "Green", "Yellow"],
-  images: [
-    {
-      url: "https://picsum.photos/500/500?random=1",
-      altText: "DELL 1",
-    },
-    {
-      url: "https://picsum.photos/500/500?random=2",
-      altText: "DELL 2",
-    },
-    {
-      url: "https://picsum.photos/500/500?random=3",
-      altText: "DELL 3",
-    },
-  ],
-};
-const ProductDetails = () => {
+import { fetchSimilarProducts, fetchSingleProduct } from "../../redux/slices/productsSlice";
+import { useParams } from "react-router-dom";
+
+const ProductDetails = ({productId}) => {
+  const {id}=useParams()
+  const dispatch=useDispatch()
+  const {selectedProduct,loading,error}=useSelector(
+    (state)=>state.products
+  )
+  const {user,guestId}=useSelector((state)=>state.auth)
   const [mainImage, setMainImage] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+
+  const productFetchId=productId||id
+  useEffect(()=>{
+    if(productFetchId){
+      dispatch(fetchSingleProduct(productFetchId))
+      dispatch(fetchSimilarProducts({id:productFetchId}))
+    }
+  },[dispatch,productFetchId])
   useEffect(() => {
     if (selectedProduct?.images?.length > 0) {
       setMainImage(selectedProduct.images[0].url);
@@ -52,17 +42,38 @@ const ProductDetails = () => {
       return;
     }
     setIsButtonDisabled(true);
-    setTimeout(() => {
-      toast.success("Product added to cart", {
-        duration: 1000,
-      });
-      setIsButtonDisabled(false);
-    }, 500);
+    dispatch(
+      addToCart(
+        {
+          productId:productFetchId,
+          quantity,
+          size:selectedSize,
+          color:selectedColor,
+          guestId,
+          userId:user?._id,
+        }
+      )
+    )
+    .then(()=>{
+      toast.success("Product added to cart",{
+        duration:1000,
+      })
+    })
+    .finally(()=>{
+      setIsButtonDisabled(false)
+    })
   };
+  if(loading){
+    return <p>Loading...</p>
+  }
+
+  if (error){
+    return <p>Error:{error}</p>
+  }
   return (
     <section>
       <div className="p-6">
-        <p className="text-center font-bold text-black text-2xl">BEST SELLER</p>
+        {selectedProduct&&(
         <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg">
           <div className="flex flex-col md:flex-row">
             <div className="hidden md:flex flex-col space-y-4 mr-6">
@@ -198,6 +209,7 @@ const ProductDetails = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
         {/*Feature No.1*/}

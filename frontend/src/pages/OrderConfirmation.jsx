@@ -1,40 +1,22 @@
-import { Link } from "react-router-dom";
-
-const checkout = {
-  _id: "123321",
-  createdAt: new Date(),
-  checkoutItems: [
-    {
-      productId: "1",
-      name: "DELL BUSINESS PC",
-      price: 400000,
-      brand: "DELL",
-      material: "Plastic",
-      size: "Compact",
-      color: "Red",
-      image: "https://picsum.photos/500/500?random=1",
-      qty: 1, // added quantity
-    },
-    {
-      productId: "2",
-      name: "DELL 2 BUSINESS PC",
-      price: 400000,
-      brand: "DELL",
-      material: "Plastic",
-      size: "Compact",
-      color: "Red",
-      image: "https://picsum.photos/500/500?random=2",
-      qty: 2, // added quantity
-    },
-  ],
-  shippingAddress: {
-    address: "Douala",
-    city: "Yassa",
-    country: "Cameroon",
-  },
-};
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { clearCart } from "../redux/slices/cartSlice";
 
 const OrderConfirmation = () => {
+  const dispatch=useDispatch()
+  const navigate=useNavigate()
+  const {checkout}=useSelector((state)=>state.checkout)
+
+  //clear the cart when the order is confirmed
+  useEffect(()=>{
+    if (checkout&&checkout._id){
+      dispatch(clearCart())
+      localStorage.removeItem("cart")
+    }else{
+      navigate("/my-orders")
+    }
+  },[checkout,dispatch,navigate])
   const calculateEstimatedDelivery = (createdAt) => {
     const orderDate = new Date(createdAt);
     orderDate.setDate(orderDate.getDate() + 10);

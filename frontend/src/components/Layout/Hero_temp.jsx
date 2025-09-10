@@ -14,10 +14,10 @@ const Hero_temp = () => {
             LAPTOP & MACBOOK <br /> TECH
           </h1>
           <p className="text-sm tracking-tighter md:text-lg mb-6">
-            Explore our vacation-ready outfits with fast worldwide shipping
+            Explore our tech with fast worldwide shipping
           </p>
           <Link
-            to="#"
+            to="/collections/all"
             className="bg-[#5C5CFF] text-white px-6 py-2 rounded-sm text-lg"
           >
             Shop Now

@@ -1,28 +1,48 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import register from "../assets/register.jpg";
 import { registerUser } from "../redux/slices/authSlice";
-import { useDispatch } from "react-redux";
+import { mergeCart } from "../redux/slices/cartSlice"; 
+import { useDispatch, useSelector } from "react-redux";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const { user, guestId, loading, error } = useSelector((state) => state.auth);
+  const { cart } = useSelector((state) => state.cart);
+
+  // redirect parameter (?redirect=/checkout)
+  const redirect = new URLSearchParams(location.search).get("redirect") || "/";
+  const isCheckoutRedirect = redirect.includes("checkout");
+
+  useEffect(() => {
+    if (user) {
+      if (cart?.products.length > 0 && guestId) {
+        dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
+          navigate(isCheckoutRedirect ? "/checkout" : "/");
+        });
+      } else {
+        navigate(isCheckoutRedirect ? "/checkout" : "/");
+      }
+    }
+  }, [user, guestId, cart, isCheckoutRedirect, dispatch, navigate]);
 
   const handleRegister = (e) => {
     e.preventDefault();
-    console.log("User Registered: ", { name, email, password });
-    dispatch(registerUser({ name, email, password }));
 
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
 
-    alert("Registration successful! Please login.");
+    dispatch(registerUser({ name, email, password }));
   };
 
   return (
@@ -36,13 +56,14 @@ export default function Register() {
             <div>
               <label className="block text-sm mb-1">Name</label>
               <input
-                type="name"
+                type="text"
                 className="w-full px-4 py-2 rounded-lg text-black bg-white border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
+
             <div>
               <label className="block text-sm mb-1">Email address</label>
               <input
@@ -76,10 +97,15 @@ export default function Register() {
               />
             </div>
 
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
             <div className="flex items-center justify-between text-sm">
               <p>
                 Already have an account?{" "}
-                <Link to="/login" className="text-blue-300 hover:underline">
+                <Link
+                  to={`/login?redirect=${encodeURIComponent(redirect)}`}
+                  className="text-blue-300 hover:underline"
+                >
                   Login
                 </Link>
               </p>
@@ -87,9 +113,14 @@ export default function Register() {
 
             <button
               type="submit"
-              className="w-full py-2   bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold transition"
+              disabled={loading}
+              className={`w-full py-2 rounded-lg font-semibold transition ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
             >
-              Register
+              {loading ? "Registering..." : "Register"}
             </button>
           </form>
         </div>
