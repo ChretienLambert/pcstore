@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import {FaBoxOpen,FaClipboardList,FaUser,FaStore,FaSignOutAlt,vgg} from "react-icons/fa";
+import {FaBoxOpen,FaClipboardList,FaUser,FaStore,FaSignOutAlt} from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { logout } from "../../redux/slices/authSlice";
 import { clearCart } from "../../redux/slices/cartSlice";

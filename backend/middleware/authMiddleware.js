@@ -3,24 +3,35 @@ const User = require("../models/User");
 
 //Middleware to protect routes
 const protect = async (req, res, next) => {
-  let token;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      req.user = await User.findById(decoded.user.id).select("-password"); //excldue password
-      next();
-    } catch (error) {
-      console.error("Token verification failed:", error);
-      res.status(401).json({ message: "Not authorized, token failed" });
+  try {
+    const authHeader = req.headers.authorization || req.headers["Authorization"];
+    if (!authHeader || typeof authHeader !== "string") {
+      return res.status(401).json({ message: "Not authorized, no token" });
     }
-  } else {
-    res.status(401).json({ message: "Not authorized, no token provided!" });
+
+    // Allow either "Bearer <token>" or the raw token
+    const token =
+      authHeader.startsWith("Bearer ")
+        ? authHeader.split(" ")[1]
+        : authHeader;
+    if (!token) return res.status(401).json({ message: "Not authorized, no token" });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      return res.status(401).json({ message: "Token verification failed", error: err.message });
+    }
+
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error("Auth middleware error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

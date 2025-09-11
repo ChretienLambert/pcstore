@@ -1,8 +1,24 @@
 const express = require("express");
 const Product = require("../models/Product");
 const { protect, admin } = require("../middleware/authMiddleware");
+const mongoose = require("mongoose");
 
 const router = express.Router();
+
+// helper: validate ObjectId safely
+const isValidObjectId = (id) => {
+  if (!id) return false;
+  return mongoose.Types.ObjectId.isValid(String(id));
+};
+
+// middleware: validate :id route param
+const validateIdParam = (req, res, next) => {
+  const { id } = req.params;
+  if (!id) return res.status(400).json({ message: "Missing id parameter" });
+  if (!isValidObjectId(id))
+    return res.status(400).json({ message: "Invalid id parameter" });
+  next();
+};
 
 // @route   POST /api/products
 // @desc    Create a new product
@@ -303,17 +319,15 @@ router.get("/best-seller", async (req, res) => {
 //@route GET /api/products/:id
 //@desc Get a single product by ID
 //@access Public
-router.get("/:id", async (req, res) => {
+router.get("/:id", validateIdParam, async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (product) {
-      res.json(product);
-    } else {
-      res.status(404).json({ message: "Product Not Found" });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    const id = req.params.id;
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 //@route GET /api/product/similar/:id
@@ -337,5 +351,33 @@ router.get("/similar/:id", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+
+// Example: before using an id from params/query/body
+// if (req.params.id) {
+//   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+//     return res.status(400).json({ message: 'Invalid product id' });
+//   }
+// }
+
+// If you accept arrays/objects from the client, normalize to an array of id strings:
+// const normalizeIds = (maybeIds) => {
+//   if (!maybeIds) return [];
+//   if (!Array.isArray(maybeIds)) maybeIds = [maybeIds];
+//   return maybeIds
+//     .map((v) => {
+//       if (!v) return null;
+//       // if client sent object like { _id: '...' } or full doc, extract _id
+//       if (typeof v === 'object') return v._id || v.id || null;
+//       return String(v);
+//     })
+//     .filter(Boolean)
+//     .filter((id) => mongoose.Types.ObjectId.isValid(id));
+// };
+
+// Example usage when building a query that uses _id:
+// const ids = normalizeIds(req.body.ids || req.query.ids);
+// if (ids.length) {
+//   query._id = { $in: ids };
+// }
 
 module.exports = router;

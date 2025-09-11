@@ -4,27 +4,30 @@ import { useNavigate } from "react-router-dom";
 import { fetchAllOrders, updateOrderStatus } from "../../redux/slices/adminOrderSlice";
 
 const OrderManagement = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
+  const { orders, loading, error } = useSelector((state) => state.adminOrders);
 
-  const dispatch=useDispatch()
-  const navigate=useNavigate()
-  const {user}=useSelector((state)=>state.auth)
-  const {orders,loading,error}=useSelector((state)=>state.adminOrders)
-  useEffect(()=>{
-    if(!user || user.role!=="admin"){
-      navigate("/")
-    }else{
-      dispatch(fetchAllOrders())
+  useEffect(() => {
+    if (!user || user.role !== "admin") {
+      navigate("/");
+    } else {
+      dispatch(fetchAllOrders());
     }
-  },[dispatch,user,navigate])
+  }, [dispatch, user, navigate]);
+
   const handleStatusChange = (orderId, status) => {
-    dispatch(updateOrderStatus({id: orderId,status}))
+    dispatch(updateOrderStatus({ id: orderId, status }));
   };
 
-  if (loading) return <p>Loading...</p>
-  if (error) return <p>Error: {error}</p>
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
+
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <h2 className="text-2xl font-vold mb-6">Order Management</h2>
+      <h2 className="text-2xl font-bold mb-6">Order Management</h2>
+
       <div className="overflow-x-auto shadow-md sm:rounded-lg">
         <table className="min-w-full text-left text-gray-500">
           <thead className="bg-gray-100 text-xs uppercase text-gray-700">
@@ -46,8 +49,8 @@ const OrderManagement = () => {
                   <td className="py-4 px-4 font-medium text-gray-900 whitespace-nowrap">
                     #{order._id}
                   </td>
-                  <td className="p-4">{order.user.name}</td>
-                  <td className="p-4">{order.totalPrice}</td>
+                  <td className="p-4">{order.user?.name || "Guest"}</td>
+                  <td className="p-4">{order.totalPrice?.toLocaleString()} FCFA</td>
                   <td className="p-4">
                     <select
                       value={order.status}
@@ -55,19 +58,19 @@ const OrderManagement = () => {
                         handleStatusChange(order._id, e.target.value)
                       }
                       className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
-                    focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                        focus:ring-blue-500 focus:border-blue-500 block p-2.5"
                     >
                       <option value="processing">Processing</option>
-                      <option value="processing">Shipped</option>
-                      <option value="processing">Delivered</option>
-                      <option value="processing">Cancelled</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
                     </select>
                   </td>
                   <td className="p-4">
                     <button
-                      onClick={() => handleStatusChange(order._id, "Delivered")}
+                      onClick={() => handleStatusChange(order._id, "delivered")}
                       className="bg-green-500 text-white px-4 py-2 rounded 
-                      hover:bg-green-600 cursor-pointer"
+                        hover:bg-green-600 cursor-pointer"
                     >
                       Mark as Delivered
                     </button>
