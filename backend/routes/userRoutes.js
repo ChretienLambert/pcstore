@@ -1,7 +1,9 @@
 const express = require("express");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const { protect } = require("../middleware/authMiddleware");
+
+// Replace the tolerant import with named import that matches middleware export
+const { protect, admin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -21,15 +23,9 @@ router.post("/register", async (req, res) => {
     user = new User({ name, email, password });
     await user.save();
 
-    //Create JWT Payload
-    const payload = {
-      user: {
-        id: user._id,
-        role: user.role,
-      },
-    };
+    // Sign flat payload { id, role } so middleware can use decoded.id
+    const payload = { id: user._id, role: user.role };
 
-    //Sign and return the token along with the user data
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
@@ -72,15 +68,8 @@ router.post("/login", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid Credentials" });
 
-    //Create JWT Payload
-    const payload = {
-      user: {
-        id: user._id,
-        role: user.role,
-      },
-    };
+    const payload = { id: user._id, role: user.role };
 
-    //Sign and return the token along with the user data
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
@@ -106,9 +95,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// @route GET /api/users/profile
-// @desc Get logged-in user's profile (Protect Route)
-// @acces Private
+// @route GET /api/users/profilele
+// @desc Get logged-in user's profile (Protect Route)s profile (Protect Route)
+// @acces Privateivate
 router.get("/profile", protect, async (req, res) => {
   res.json(req.user);
 });

@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const { protect, admin } = require("../middleware/authMiddleware");
 
@@ -76,6 +77,22 @@ router.delete("/:id", protect, admin, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error" });
+  }
+});
+
+// Example: GET /api/admin/users/:id (adjust per your route)
+router.get("/users/:id", protect, admin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(String(id))) {
+      return res.status(400).json({ message: "Invalid or missing user id" });
+    }
+    const user = await User.findById(id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
   }
 });
 

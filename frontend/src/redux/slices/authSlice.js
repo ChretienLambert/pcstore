@@ -1,108 +1,120 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-// Retrieve user info if available
-const userFromStorage = localStorage.getItem("userInfo")
-  ? JSON.parse(localStorage.getItem("userInfo"))
-  : null;
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
 
-// Guest ID handling
-const initialGuestId =
-  localStorage.getItem("guestId") || `guest_${new Date().getTime()}`;
-localStorage.setItem("guestId", initialGuestId);
+// restore token from storage and set axios default header
+const storedToken = localStorage.getItem("userToken");
 
-const initialState = {
-  user: userFromStorage,
-  guestId: initialGuestId,
-  loading: false,
-  error: null,
-};
+// only set axios header for a valid token string
+if (storedToken && storedToken !== "null" && storedToken !== "undefined") {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
+} else {
+  // remove invalid token if present
+  localStorage.removeItem("userToken");
+  delete axios.defaults.headers.common["Authorization"];
+}
 
-// Login thunk
-export const loginUser = createAsyncThunk(
-  "auth/loginUser",
-  async (credentials, { rejectWithValue }) => {
+export const loginUser = createAsyncThunk("auth/login", async (credentials, thunkAPI) => {
+  try {
+    const res = await axios.post(`${BACKEND}/api/users/login`, credentials);
+    const { token } = res.data;
+    // when you receive token on login/register:
+    if (token && token !== "null" && token !== "undefined") {
+      localStorage.setItem("userToken", token);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem("userToken");
+      delete axios.defaults.headers.common["Authorization"];
+    }
+    return res.data;
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response?.data || error.message);
+  }
+});
+
+export const registerUser = createAsyncThunk("auth/register", async (credentials, thunkAPI) => {
+  try {
+    const res = await axios.post(`${BACKEND}/api/users/register`, credentials);
+    const { token } = res.data;
+    // when you receive token on login/register:
+    if (token && token !== "null" && token !== "undefined") {
+      localStorage.setItem("userToken", token);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem("userToken");
+      delete axios.defaults.headers.common["Authorization"];
+    }
+    return res.data;
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.response?.data || error.message);
+  }
+});
+
+export const fetchProfile = createAsyncThunk(
+  "auth/fetchProfile",
+  async (_, thunkAPI) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/login`,
-        credentials
-      );
-      localStorage.setItem("userInfo", JSON.stringify(response.data.user));
-      localStorage.setItem("userToken", response.data.token); // backend should return token
-      return response.data.user;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: "Login failed" }
-      );
+      const res = await axios.get(`${BACKEND}/api/users/profile`);
+      return res.data; // expect { ...user }
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
   }
 );
 
-// Register thunk
-export const registerUser = createAsyncThunk(
-  "auth/registerUser",
-  async (newUser, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/users/register`,
-        newUser
-      );
-      localStorage.setItem("userInfo", JSON.stringify(response.data.user));
-      localStorage.setItem("userToken", response.data.token);
-      return response.data.user;
-    } catch (error) {
-      return rejectWithValue(
-        error.response?.data || { message: "Register failed" }
-      );
-    }
-  }
-);
-
-// Slice
 const authSlice = createSlice({
   name: "auth",
-  initialState,
+  initialState: {
+    user: null,
+    token: storedToken || null,
+    loading: false,
+    error: null,
+  },
   reducers: {
-    logout: (state) => {
+    logout(state) {
       state.user = null;
-      state.guestId = `guest_${new Date().getTime()}`;
-      localStorage.removeItem("userInfo");
+      state.token = null;
       localStorage.removeItem("userToken");
-      localStorage.setItem("guestId", state.guestId); // create new guest ID
-    },
-    generateNewGuestId: (state) => {
-      state.guestId = `guest_${new Date().getTime()}`;
-      localStorage.setItem("guestId", state.guestId);
+      delete axios.defaults.headers.common["Authorization"];
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      .addCase(loginUser.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload.user || null;
+        state.token = action.payload.token || null;
       })
-      .addCase(loginUser.rejected, (state, action) => {
+      .addCase(loginUser.rejected, (state, action) => { state.loading = false; state.error = action.payload || action.error.message; })
+
+      .addCase(registerUser.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.error = action.payload.message;
+        state.user = action.payload.user || null;
+        state.token = action.payload.token || null;
       })
-      .addCase(registerUser.pending, (state) => {
+      .addCase(registerUser.rejected, (state, action) => { state.loading = false; state.error = action.payload || action.error.message; })
+
+      .addCase(fetchProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(fetchProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload;
+        state.user = action.payload || null;
       })
-      .addCase(registerUser.rejected, (state, action) => {
+      .addCase(fetchProfile.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload.message;
+        state.error = action.payload || action.error?.message;
+        // if token invalid, clear it
+        state.token = null;
+        localStorage.removeItem("userToken");
+        delete axios.defaults.headers.common["Authorization"];
       });
   },
 });
 
-export const { logout, generateNewGuestId } = authSlice.actions;
+export const { logout } = authSlice.actions;
 export default authSlice.reducer;

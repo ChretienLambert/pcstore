@@ -1,23 +1,33 @@
 const express = require("express");
+const router = express.Router();
 const Product = require("../models/Product");
 const { protect, admin } = require("../middleware/authMiddleware");
-const mongoose = require("mongoose");
 
-const router = express.Router();
-
-// helper: validate ObjectId safely
+// Helpers: validate ObjectId and normalize incoming id values
 const isValidObjectId = (id) => {
   if (!id) return false;
   return mongoose.Types.ObjectId.isValid(String(id));
 };
 
-// middleware: validate :id route param
 const validateIdParam = (req, res, next) => {
   const { id } = req.params;
-  if (!id) return res.status(400).json({ message: "Missing id parameter" });
-  if (!isValidObjectId(id))
+  if (!id || !isValidObjectId(id)) {
     return res.status(400).json({ message: "Invalid id parameter" });
+  }
   next();
+};
+
+const normalizeIds = (maybeIds) => {
+  if (!maybeIds) return [];
+  if (!Array.isArray(maybeIds)) maybeIds = [maybeIds];
+  return maybeIds
+    .map((v) => {
+      if (!v) return null;
+      if (typeof v === "object") return v._id || v.id || null;
+      return String(v);
+    })
+    .filter(Boolean)
+    .filter((id) => isValidObjectId(id));
 };
 
 // @route   POST /api/products
@@ -316,13 +326,10 @@ router.get("/best-seller", async (req, res) => {
   }
 });
 
-//@route GET /api/products/:id
-//@desc Get a single product by ID
-//@access Public
+// Example: apply validateIdParam to routes that use :id
 router.get("/:id", validateIdParam, async (req, res) => {
   try {
-    const id = req.params.id;
-    const product = await Product.findById(id);
+    const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   } catch (err) {
@@ -330,25 +337,18 @@ router.get("/:id", validateIdParam, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-//@route GET /api/product/similar/:id
-//@desc Retrieve similar products based on the currents product's gender and category
-//@access Public
-router.get("/similar/:id", async (req, res) => {
-  const { id } = req.params;
+
+// Example: guard before using an incoming _id in any query
+router.post("/bulk", async (req, res) => {
   try {
-    const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    const similarProducts = await Product.find({
-      _id: { $ne: id },
-      gender: product.gender,
-      category: product.category,
-    }).limit(4);
-    res.json(similarProducts);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    const ids = normalizeIds(req.body.ids || req.query.ids);
+    if (!ids.length)
+      return res.status(400).json({ message: "No valid ids provided" });
+    const products = await Product.find({ _id: { $in: ids } });
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -379,5 +379,87 @@ router.get("/similar/:id", async (req, res) => {
 // if (ids.length) {
 //   query._id = { $in: ids };
 // }
+
+//@route GET /api/products/similar/:id
+//@desc Retrieve similar products by product ID
+//@access Public
+router.get("/similar/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) return res.status(200).json([]); // prefer 200 + empty array
+    // compute similar products ...
+    const similar = await Product.find({ /* your criteria */ }).limit(8);
+    return res.status(200).json(similar || []);
+  } catch (err) {
+    console.error("GET /api/products/similar error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// CREATE product (example POST handler) - ensure numeric prices and validate discount <= price
+router.post("/", async (req, res) => {
+  try {
+    const body = { ...req.body };
+    // Ensure numeric conversion
+    if (body.price !== undefined) body.price = Number(body.price);
+    if (body.discountPrice !== undefined) body.discountPrice = Number(body.discountPrice);
+
+    if (
+      Number.isFinite(body.price) &&
+      Number.isFinite(body.discountPrice) &&
+      body.discountPrice > body.price
+    ) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: { discountPrice: "Discount price cannot be greater than regular price" },
+      });
+    }
+
+    const product = await Product.create(body);
+    return res.status(201).json(product);
+  } catch (err) {
+    console.error("POST /api/products error:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message, errors: err.errors });
+    }
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// UPDATE product (PUT) - validate and use runValidators
+router.put("/:id", async (req, res) => {
+  try {
+    const update = { ...req.body };
+    if (update.price !== undefined) update.price = Number(update.price);
+    if (update.discountPrice !== undefined) update.discountPrice = Number(update.discountPrice);
+
+    if (
+      Number.isFinite(update.price) &&
+      Number.isFinite(update.discountPrice) &&
+      update.discountPrice > update.price
+    ) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: { discountPrice: "Discount price cannot be greater than regular price" },
+      });
+    }
+
+    const product = await Product.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+      runValidators: true,
+      context: "query",
+    });
+
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    return res.status(200).json(product);
+  } catch (err) {
+    console.error("PUT /api/products/:id error:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message, errors: err.errors });
+    }
+    return res.status(500).json({ message: err.message || "Server error" });
+  }
+});
 
 module.exports = router;

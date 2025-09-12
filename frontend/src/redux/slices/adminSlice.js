@@ -1,15 +1,21 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-//fetch admin users only
+const getBearer = () => {
+  const raw = localStorage.getItem("userToken");
+  if (!raw || raw === "null" || raw === "undefined") return null;
+  return `Bearer ${raw}`;
+};
+
 export const fetchUsers = createAsyncThunk("admin/fetchUser", async () => {
+  const headers = {};
+  const bearer = getBearer();
+  if (bearer) headers.Authorization = bearer;
   const response = await axios.get(
     `${import.meta.env.VITE_BACKEND_URL}/api/admin/users`,
-    {
-      headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
-    }
+    { headers }
   );
-  return response.data; 
+  return response.data;
 });
 
 //Add the user create button
@@ -39,7 +45,7 @@ export const updateUser = createAsyncThunk(
   async ({ id, name, email, role }, { rejectWithValue }) => {
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/admin/users/${id}`, 
+        `${import.meta.env.VITE_BACKEND_URL}/api/admin/users/${id}`,
         { name, email, role },
         {
           headers: {
@@ -55,21 +61,24 @@ export const updateUser = createAsyncThunk(
 );
 
 //delete a user
-export const deleteUser = createAsyncThunk("admin/deleteUser", async (id, { rejectWithValue }) => {
-  try {
-    await axios.delete(
-      `${import.meta.env.VITE_BACKEND_URL}/api/admin/users/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-        },
-      }
-    );
-    return id;
-  } catch (error) {
-    return rejectWithValue(error.response.data);
+export const deleteUser = createAsyncThunk(
+  "admin/deleteUser",
+  async (id, { rejectWithValue }) => {
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/api/admin/users/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
+        }
+      );
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
   }
-});
+);
 
 const adminSlice = createSlice({
   name: "admin",
@@ -96,7 +105,7 @@ const adminSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(addUser.fulfilled, (state, action) => { 
+      .addCase(addUser.fulfilled, (state, action) => {
         state.loading = false;
         state.users.push(action.payload);
       })
@@ -106,7 +115,7 @@ const adminSlice = createSlice({
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         const updatedUser = action.payload;
-        
+
         const userIndex = state.users.findIndex(
           (user) => user._id === updatedUser._id
         );

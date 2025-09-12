@@ -33,28 +33,28 @@ const Navbar = () => {
       </div>
       <div className="hidden md:flex text-sm space-x-10">
         <Link
-          to="/collections/all?category=Laptop"
+          to="/collections/all?category=Laptops"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          LAPTOP
+          LAPTOPS
         </Link>
         <Link
-          to="/collections/all?category=GamingLaptop"
+          to="/collections/all?category=Mini PC"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          GAMING LAPTOP
+          MINI PC
         </Link>
         <Link
-          to="/collections/all?category=BusinessLaptop"
+          to="/collections/all?category=Workstations"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          BUSINESS LAPTOP
+          WORKSTATIONS
         </Link>
         <Link
-          to="/collections/all?category=MACBOOK"
+          to="/collections/all?category=Desktops"
           className="text-black hover:text-blue-500 text-sm font-medium"
         >
-          MACBOOk
+          DESKTOPS
         </Link>
       </div>
 
@@ -100,11 +100,11 @@ const Navbar = () => {
           <h2 className="text-xl font-semibold mb-4">Menu</h2>
           <nav className="space-y-4">
             <Link
-              to="/collections/all?category=Laptop"
+              to="/collections/all?category=Laptops"
               onClick={togglenavdrawer}
               className="block text-gray-600 hover:text-blue-500"
             >
-              LAPTOP
+              LAPTOPS
             </Link>
             <Link
               to="/collections/all?category=GamingLaptop"

@@ -31,11 +31,7 @@ const orderItemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     orderItems: [orderItemSchema],
     shippingAddress: {
       address: { type: String, required: true },
@@ -43,13 +39,28 @@ const orderSchema = new mongoose.Schema(
       postalCode: { type: String, required: true },
       country: { type: String, required: true },
     },
-    paymentMethod: {
-      type: String,
-      required: true,
+    paymentMethod: { type: String, required: true },
+    paymentResult: {
+      id: { type: String },
+      status: { type: String },
+      update_time: { type: String },
+      email_address: { type: String },
     },
-    totalPrice: {
-      type: Number,
-      required: true,
+    itemsPrice: { type: Number, required: true, default: 0.0 },
+    taxPrice: { type: Number, required: true, default: 0.0 },
+    shippingPrice: { type: Number, required: true, default: 0.0 },
+    totalPrice: { type: Number, required: true, default: 0.0 },
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+        "returned",
+      ],
+      default: "pending",
     },
     isPaid: {
       type: Boolean,
@@ -69,12 +80,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "pending",
     },
-    status: {
-      type: String,
-      enum: ["Processing", "Shipping", "Delivered", "Cancelled"],
-      default: "Processing",
-    },
   },
   { timestamps: true }
 );
-module.exports = mongoose.model("order", orderSchema);
+module.exports = mongoose.model("Order", orderSchema);

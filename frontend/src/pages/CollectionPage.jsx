@@ -1,26 +1,39 @@
-import { useEffect, useRef } from "react";
-import { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FaFilter } from "react-icons/fa";
 import FilterSidebar from "../components/Products/FilterSidebar";
 import SortOptions from "../components/Products/SortOptions";
 import ProductGrid from "../components/Products/ProductGrid";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProductsByFilters } from "../redux/slices/productsSlice";
 
 const CollectionPage = () => {
-  const {collection}=useParams()
-  const {searchParams}=useSearchParams()
-  const dispatch=useDispatch()
-  const {products,loading,error}=useSelector((state)=>state.products)
-  const queryParams=object.fromEntries([...searchParams])
+  const { collection } = useParams();
+  const [searchParams] = useSearchParams();
+  const dispatch = useDispatch();
+  const { products, loading, error } = useSelector((state) => state.products);
+
+  // build a plain object from URLSearchParams safely
+  const queryParams = Object.fromEntries([...searchParams]);
 
   const sidebarRef = useRef(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(()=>{
-    dispatch(fetchProductsByFilters({collection,...queryParams}))
-  },[dispatch,collection,searchParams])
+  const normalizeFilters = (collectionParam, paramsObj) => {
+    // backend product data uses `collections` (plural) field
+    const filters = { ...paramsObj };
+    if (collectionParam) filters.collections = collectionParam;
+    // accept both `collection` and `collections` if provided in query
+    if (filters.collection && !filters.collections)
+      filters.collections = filters.collection;
+    return filters;
+  };
+
+  // fetch when collection or query string changes
+  useEffect(() => {
+    const filters = normalizeFilters(collection, queryParams);
+    dispatch(fetchProductsByFilters(filters));
+  }, [dispatch, collection, searchParams.toString()]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -62,7 +75,9 @@ const CollectionPage = () => {
         <FilterSidebar />
       </div>
       <div className="flex-grow p-4">
-        <h2 className="text-2xl uppercase mb-4">All Collection</h2>
+        <h2 className="text-2xl uppercase mb-4">
+          {collection || "All Collection"}
+        </h2>
         <SortOptions />
         <ProductGrid products={products} loading={loading} error={error} />
       </div>

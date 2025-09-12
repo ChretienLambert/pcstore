@@ -1,26 +1,30 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 const FilterSidebar = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
+
+  const MAX_PRICE = 10000000;
+
   const [filters, setFilters] = useState({
     category: "",
     color: "",
     size: [],
     brand: [],
-    dimension: [],
     minPrice: 0,
-    maxPrice: 10000000,
+    maxPrice: MAX_PRICE,
   });
 
-  const [priceRange, setPriceRange] = useState([0, 10000000]);
+  const [priceRange, setPriceRange] = useState([0, MAX_PRICE]);
 
-  const categories = ["Laptop", "Gaming Laptop"];
-  const colors = ["Red", "Blue", "Black", "Green", "Yellow"];
-  const sizes = ["13-inch", "15-inch", "17-inch"];
-  const brands = ["HP", "ASUS", "DELL", "MACBOOK", "ACER"];
-  const dimensions = ["Compact", "Standard", "Large"];
+  // Available filter options (added missing "All-in-One")
+  const categories = ["Laptops", "Mini PC", "Desktops", "All-in-One", "Workstations"];
+  const colors = ["Black", "Silver", "Space Gray"];
+  const sizes = ["Standard", "One Size", "Full Tower", "Mid Tower", "Small Form Factor"];
+  const brands = [
+    "HP", "ASUS", "Dell", "Apple", "Acer", "Lenovo",
+    "MSI", "Beelink", "Custom Build", "WorkBuild", "Intel"
+  ];
 
   const handleFilterChange = (e) => {
     const { name, value, checked, type } = e.target;
@@ -30,11 +34,10 @@ const FilterSidebar = () => {
       if (checked) {
         newFilters[name] = [...(newFilters[name] || []), value];
       } else {
-        newFilters[name] = newFilters[name].filter((item) => item !== value);
+        newFilters[name] = (newFilters[name] || []).filter((item) => item !== value);
       }
     } else {
       newFilters[name] = value;
-      console.log(newFilters);
     }
 
     setFilters(newFilters);
@@ -43,33 +46,55 @@ const FilterSidebar = () => {
 
   const updateURLParams = (newFilters) => {
     const params = new URLSearchParams();
-    Object.keys(newFilters).forEach((key) => {
-      if (Array.isArray(newFilters[key]) && newFilters[key].length > 0) {
-        params.append(key, newFilters[key].join(","));
-      } else if (newFilters[key]) {
-        params.append(key, newFilters[key]);
+
+    Object.entries(newFilters).forEach(([key, val]) => {
+      // do not remap local 'category' to 'collections' here.
+      // keep category => category, collections should be a separate filter if needed.
+      const outKey = key;
+
+      if (Array.isArray(val)) {
+        if (val.length) params.set(outKey, val.join(","));
+      } else if (typeof val === "number") {
+        params.set(outKey, String(val));
+      } else if (val) {
+        params.set(outKey, String(val));
       }
     });
+
     setSearchParams(params);
-    navigate(`?${params.toString}`);
   };
 
   useEffect(() => {
     const params = Object.fromEntries([...searchParams]);
+
+    const minP = Number(params.minPrice) || 0;
+    const maxP = Number(params.maxPrice) || MAX_PRICE;
+
+    // prefer params.category but accept legacy params.collections if present
     setFilters({
-      category: params.category || "",
+      category: params.category || params.collections || params.collection || "",
       color: params.color || "",
       size: params.size ? params.size.split(",") : [],
-      material: params.material ? params.material.split(",") : [],
       brand: params.brand ? params.brand.split(",") : [],
-      minPrice: Number(params.minPrice) || 0,
-      maxPrice: Number(params.maxPrice) || 10000000,
+      minPrice: minP,
+      maxPrice: maxP,
     });
-    setPriceRange([
-      Number(params.minPrice) || 0,
-      Number(params.maxPrice) || 10000000,
-    ]);
+
+    setPriceRange([minP, maxP]);
   }, [searchParams]);
+
+  // --- Price slider handlers ---
+  const handleRangeChange = (e) => {
+    const maxVal = Number(e.target.value);
+    setPriceRange([0, maxVal]);
+    setFilters((prev) => ({ ...prev, maxPrice: maxVal }));
+  };
+
+  const commitPriceChange = () => {
+    const newFilters = { ...filters, minPrice: priceRange[0], maxPrice: priceRange[1] };
+    setFilters(newFilters);
+    updateURLParams(newFilters);
+  };
 
   return (
     <div className="p-4 bg-blue-100">
@@ -93,26 +118,7 @@ const FilterSidebar = () => {
         ))}
       </div>
 
-      {/*Dimension Filter*/}
-      <div className="mb-6">
-        <label className="block text-gray-600 font-medium mb-2">
-          Dimension
-        </label>
-        {dimensions.map((dimension) => (
-          <div key={dimension} className="flex items-center mb-1">
-            <input
-              type="radio"
-              name="dimension"
-              value={dimension}
-              checked={filters.dimension === dimension}
-              onChange={handleFilterChange}
-              className="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300"
-            />
-            <span className="text-gray-700">{dimension}</span>
-          </div>
-        ))}
-      </div>
-      {/*Color Filter*/}
+      {/* Color Filter */}
       <div className="mb-6">
         <label className="block text-gray-600 font-medium mb-2">Color</label>
         <div className="flex flex-wrap gap-2">
@@ -121,11 +127,13 @@ const FilterSidebar = () => {
               key={color}
               type="button"
               name="color"
-              onClick={() => setFilters({ ...filters, color })}
+              onClick={() => {
+                const newFilters = { ...filters, color: filters.color === color ? "" : color };
+                setFilters(newFilters);
+                updateURLParams(newFilters);
+              }}
               className={`w-8 h-8 rounded-full border cursor-pointer transition hover:scale-105 
-          ${
-            filters.color === color ? "ring-2 ring-blue-500" : "border-gray-300"
-          }`}
+                ${filters.color === color ? "ring-2 ring-blue-500" : "border-gray-300"}`}
               style={{ backgroundColor: color.toLowerCase() }}
             />
           ))}
@@ -141,7 +149,7 @@ const FilterSidebar = () => {
               type="checkbox"
               name="size"
               value={size}
-              checked={filters.size.includes(size)}
+              checked={(filters.size || []).includes(size)}
               onChange={handleFilterChange}
               className="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300"
             />
@@ -159,7 +167,7 @@ const FilterSidebar = () => {
               type="checkbox"
               name="brand"
               value={brand}
-              checked={filters.brand.includes(brand)}
+              checked={(filters.brand || []).includes(brand)}
               onChange={handleFilterChange}
               className="mr-2 h-4 w-4 text-blue-500 focus:ring-blue-400 border-gray-300"
             />
@@ -167,22 +175,25 @@ const FilterSidebar = () => {
           </div>
         ))}
       </div>
-      {/*Price range*/}
+
+      {/* Price Range */}
       <div className="mb-8">
-        <label className="block text-gray-600 font-medium mb-2">
-          Price Range
-        </label>
+        <label className="block text-gray-600 font-medium mb-2">Price Range</label>
         <input
           type="range"
-          name="priceRange"
           min={0}
-          max={1000000}
-          onChange={handleFilterChange}
-          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursoer-pointer"
+          max={MAX_PRICE}
+          value={priceRange[1]}
+          onChange={handleRangeChange}
+          onMouseUp={commitPriceChange}
+          onTouchEnd={commitPriceChange}
+          onKeyUp={commitPriceChange}
+          onBlur={commitPriceChange}
+          className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
         />
         <div className="flex justify-between text-gray-600 mt-2">
           <span>0 FCFA</span>
-          <span>{priceRange[1]}</span>
+          <span>{priceRange[1].toLocaleString()} FCFA</span>
         </div>
       </div>
     </div>

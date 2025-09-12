@@ -1,4 +1,4 @@
-const { default: mongoose, mongo } = require("mongoose");
+const mongoose = require("mongoose");
 
 const cartItemSchema = new mongoose.Schema(
   {
@@ -9,8 +9,7 @@ const cartItemSchema = new mongoose.Schema(
     },
     name: String,
     image: String,
-    price: String,
-    size: String,
+    price: Number, // was String -> use Number for calculations
     size: String,
     color: String,
     quantity: {
