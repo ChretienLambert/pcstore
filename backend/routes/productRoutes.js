@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Product = require("../models/Product");
 const { protect, admin } = require("../middleware/authMiddleware");
+const mongoose = require("mongoose");
 
 // Helpers: validate ObjectId and normalize incoming id values
 const isValidObjectId = (id) => {
@@ -94,7 +95,7 @@ router.post("/", protect, admin, async (req, res) => {
 router.put("/:id", protect, admin, async (req, res) => {
   try {
     const body = req.body || {};
-    const {
+    let {
       name,
       description,
       price,
@@ -115,9 +116,27 @@ router.put("/:id", protect, admin, async (req, res) => {
       sku,
     } = body;
 
+    // Coerce numeric fields defensively
+    if (price !== undefined) price = Number(price);
+    if (discountPrice !== undefined) discountPrice = Number(discountPrice);
+
+    // Validate discount <= price when both present
+    if (
+      Number.isFinite(price) &&
+      Number.isFinite(discountPrice) &&
+      discountPrice > price
+    ) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: {
+          discountPrice: "Discount price cannot be greater than regular price",
+        },
+      });
+    }
+
     console.debug("product update body:", body, "id:", req.params.id);
 
-    //Find the product by ID
+    // Find the product by ID
     const product = await Product.findById(req.params.id);
     if (product) {
       // Update only when the incoming value is provided (allow falsy values)
@@ -152,7 +171,7 @@ router.put("/:id", protect, admin, async (req, res) => {
       }
       if (typeof sku !== "undefined") product.sku = sku;
 
-      //Save the update product
+      // Save the updated product (this will run schema validators)
       const updatedProduct = await product.save();
       return res.json(updatedProduct);
     } else {
@@ -160,6 +179,13 @@ router.put("/:id", protect, admin, async (req, res) => {
     }
   } catch (error) {
     console.error(error);
+    // Surface validation errors as 400 so the client can handle them
+    if (error && error.name === "ValidationError") {
+      return res.status(400).json({
+        message: error.message || "Validation error",
+        errors: error.errors,
+      });
+    }
     res.status(500).send("Server Error");
   }
 });
@@ -255,19 +281,7 @@ router.get("/", async (req, res) => {
     }
 
     // debug log to inspect final query (remove in production)
-    console.debug(
-      "products query:",
-      JSON.stringify(query),
-      "sortBy:",
-      sortBy,
-      "limit:",
-      limit
-    );
-    console.debug("final query", JSON.stringify(query));
-    console.debug(
-      "inspect first 5 docs:",
-      await Product.find().limit(5).lean()
-    );
+    // verbose debug logs removed
 
     let sort = {};
     if (sortBy) {
@@ -389,7 +403,9 @@ router.get("/similar/:id", async (req, res) => {
     const product = await Product.findById(id);
     if (!product) return res.status(200).json([]); // prefer 200 + empty array
     // compute similar products ...
-    const similar = await Product.find({ /* your criteria */ }).limit(8);
+    const similar = await Product.find({
+      /* your criteria */
+    }).limit(8);
     return res.status(200).json(similar || []);
   } catch (err) {
     console.error("GET /api/products/similar error:", err);
@@ -397,69 +413,6 @@ router.get("/similar/:id", async (req, res) => {
   }
 });
 
-// CREATE product (example POST handler) - ensure numeric prices and validate discount <= price
-router.post("/", async (req, res) => {
-  try {
-    const body = { ...req.body };
-    // Ensure numeric conversion
-    if (body.price !== undefined) body.price = Number(body.price);
-    if (body.discountPrice !== undefined) body.discountPrice = Number(body.discountPrice);
-
-    if (
-      Number.isFinite(body.price) &&
-      Number.isFinite(body.discountPrice) &&
-      body.discountPrice > body.price
-    ) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: { discountPrice: "Discount price cannot be greater than regular price" },
-      });
-    }
-
-    const product = await Product.create(body);
-    return res.status(201).json(product);
-  } catch (err) {
-    console.error("POST /api/products error:", err);
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message, errors: err.errors });
-    }
-    return res.status(500).json({ message: "Server error" });
-  }
-});
-
-// UPDATE product (PUT) - validate and use runValidators
-router.put("/:id", async (req, res) => {
-  try {
-    const update = { ...req.body };
-    if (update.price !== undefined) update.price = Number(update.price);
-    if (update.discountPrice !== undefined) update.discountPrice = Number(update.discountPrice);
-
-    if (
-      Number.isFinite(update.price) &&
-      Number.isFinite(update.discountPrice) &&
-      update.discountPrice > update.price
-    ) {
-      return res.status(400).json({
-        message: "Validation error",
-        errors: { discountPrice: "Discount price cannot be greater than regular price" },
-      });
-    }
-
-    const product = await Product.findByIdAndUpdate(req.params.id, update, {
-      new: true,
-      runValidators: true,
-      context: "query",
-    });
-
-    if (!product) return res.status(404).json({ message: "Product not found" });
-    return res.status(200).json(product);
-  } catch (err) {
-    console.error("PUT /api/products/:id error:", err);
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message, errors: err.errors });
-    }
-    return res.status(500).json({ message: err.message || "Server error" });
-  }
-});
+// (Removed duplicate unprotected POST/PUT handlers — use the admin-protected handlers above)
 
 module.exports = router;

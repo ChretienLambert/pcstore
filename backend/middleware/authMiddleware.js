@@ -35,7 +35,9 @@ const protect = async (req, res, next) => {
 
     // support payload shapes: { id } or { user: { id } } or { _id }
     const userId =
-      decoded.id || decoded._id || (decoded.user && (decoded.user.id || decoded.user._id));
+      decoded.id ||
+      decoded._id ||
+      (decoded.user && (decoded.user.id || decoded.user._id));
 
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
       return res.status(401).json({ message: "Invalid token payload" });
@@ -54,7 +56,8 @@ const protect = async (req, res, next) => {
 
 const admin = (req, res, next) => {
   if (!req.user) return res.status(401).json({ message: "Not authorized" });
-  if (req.user.role !== "admin") return res.status(403).json({ message: "Admin required" });
+  if (req.user.role !== "admin")
+    return res.status(403).json({ message: "Admin required" });
   next();
 };
 
