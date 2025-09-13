@@ -19,15 +19,19 @@ router.get("/my-orders", protect, async (req, res) => {
   }
 });
 
-// GET /api/orders/:id - user or admin can view
+// GET /api/orders/:id - return single order (owner or admin)
 router.get("/:id", protect, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).lean();
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email role")
+      .lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // allow if owner or admin
     const userId = String(req.user._id);
-    if (String(order.user) !== userId && req.user.role !== "admin") {
+    if (
+      String(order.user?._id || order.user) !== userId &&
+      req.user.role !== "admin"
+    ) {
       return res
         .status(403)
         .json({ message: "Not authorized to view this order" });

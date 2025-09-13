@@ -35,10 +35,7 @@ router.post("/", protect, async (req, res) => {
       typeof it.price === "undefined" ||
       typeof it.quantity === "undefined"
     ) {
-      return res.status(400).json({
-        message:
-          "checkoutItems must include productId, name, price and quantity",
-      });
+      return res.status(400).json({ message: "Invalid checkout item" });
     }
     it.price = Number(it.price);
     it.quantity = Number(it.quantity);
@@ -49,7 +46,7 @@ router.post("/", protect, async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ message: "Invalid price or quantity in checkoutItems" });
+        .json({ message: "Invalid item quantity or price" });
     }
   }
 
@@ -64,37 +61,32 @@ router.post("/", protect, async (req, res) => {
   if (!totalPrice || Number.isNaN(totalPrice)) missing.push("totalPrice");
 
   if (missing.length) {
-    return res
-      .status(400)
-      .json({ message: "Missing required fields", missing });
+    return res.status(400).json({ message: "Missing fields", errors: missing });
   }
 
   // prefer top-level paymentMethod if provided
   paymentMethod = paymentMethod || shippingAddress.paymentMethod;
 
   try {
-    const newCheckout = await Checkout.create({
+    // create checkout record and attach user
+    const checkout = new Checkout({
       user: req.user._id,
       checkoutItems,
-      shippingAddress: {
-        address: shippingAddress.address,
-        city: shippingAddress.city,
-        postalCode: shippingAddress.postalCode,
-        country: shippingAddress.country,
-      },
+      shippingAddress,
       paymentMethod,
-      totalPrice: Number(totalPrice),
+      totalPrice,
       paymentStatus: "pending",
-      isPaid: false,
-      paymentDetails: null,
-      isFinalized: false,
     });
 
-    console.log(`Checkout created for user:${req.user._id}`);
-    return res.status(201).json(newCheckout);
+    const saved = await checkout.save();
+
+    // optionally clear user's cart if you want
+    await Cart.deleteMany({ userId: req.user._id }).catch(() => {});
+
+    return res.status(201).json(saved);
   } catch (error) {
-    console.error("Error creating checkout session:", error);
-    return res.status(500).json({ message: "Server Error" });
+    console.error("Create checkout error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -108,19 +100,22 @@ router.put("/:id/pay", protect, async (req, res) => {
     if (!checkout)
       return res.status(404).json({ message: "Checkout not found" });
 
-    if (paymentStatus === "paid") {
-      checkout.isPaid = true;
-      checkout.paymentStatus = paymentStatus;
-      checkout.paymentDetails = paymentDetails;
-      checkout.paidAt = Date.now();
-      await checkout.save();
-      return res.status(200).json(checkout);
-    } else {
-      return res.status(400).json({ message: "Invalid Payment Status" });
+    // ensure the acting user owns the checkout or is admin
+    if (String(checkout.user) !== String(req.user._id)) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to pay this checkout" });
     }
+
+    checkout.paymentStatus = paymentStatus || "paid";
+    checkout.paymentDetails = paymentDetails || {};
+    checkout.paidAt = new Date();
+    await checkout.save();
+
+    return res.json(checkout);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server Error" });
+    console.error("PUT pay error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -129,39 +124,52 @@ router.put("/:id/pay", protect, async (req, res) => {
 //@access Private
 router.post("/:id/finalize", protect, async (req, res) => {
   try {
-    const checkout = await Checkout.findById(req.params.id);
+    const checkout = await Checkout.findById(req.params.id).lean();
     if (!checkout)
       return res.status(404).json({ message: "Checkout not found" });
 
-    if (checkout.isPaid && !checkout.isFinalized) {
-      const finalOrder = await Order.create({
-        user: checkout.user,
-        orderItems: checkout.checkoutItems, // use checkout.checkoutItems
-        shippingAddress: checkout.shippingAddress,
-        paymentMethod: checkout.paymentMethod, // match casing used earlier
-        totalPrice: checkout.totalPrice,
-        isPaid: true,
-        paidAt: checkout.paidAt,
-        isDelivered: false,
-        paymentStatus: "paid",
-        paymentDetails: checkout.paymentDetails,
-      });
-
-      checkout.isFinalized = true;
-      checkout.finalizedAt = Date.now();
-      await checkout.save();
-
-      await Cart.findOneAndDelete({ user: checkout.user });
-
-      return res.status(201).json(finalOrder);
-    } else if (checkout.isFinalized) {
-      return res.status(400).json({ message: "Checkout already finalized" });
-    } else {
-      return res.status(400).json({ message: "Checkout is not paid" });
+    // ensure owner
+    if (String(checkout.user) !== String(req.user._id)) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to finalize this checkout" });
     }
+
+    if (checkout.paymentStatus !== "paid") {
+      return res.status(400).json({ message: "Payment not completed" });
+    }
+
+    // create order with user reference
+    const orderData = {
+      user: req.user._id,
+      orderItems: checkout.checkoutItems,
+      shippingAddress: checkout.shippingAddress,
+      paymentMethod: checkout.paymentMethod,
+      itemsPrice: checkout.checkoutItems.reduce(
+        (s, it) => s + Number(it.price || 0) * Number(it.quantity || 1),
+        0
+      ),
+      shippingPrice: 0,
+      taxPrice: 0,
+      totalPrice: checkout.totalPrice,
+      isPaid: true,
+      paidAt: checkout.paidAt || new Date(),
+      paymentStatus: checkout.paymentStatus || "paid",
+    };
+
+    const order = new Order(orderData);
+    const savedOrder = await order.save();
+
+    // remove checkout record
+    await Checkout.findByIdAndDelete(checkout._id).catch(() => {});
+
+    // optionally clear cart records for this user
+    await Cart.deleteMany({ userId: req.user._id }).catch(() => {});
+
+    return res.status(201).json(savedOrder);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server Error" });
+    console.error("Finalize checkout error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 

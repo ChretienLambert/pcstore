@@ -1,53 +1,40 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Hero_temp from "../components/Layout/Hero_temp";
-import PCCollection from "../components/Products/PCCollection";
-import NewArrivals from "../components/Products/NewArrivals";
-import ProductDetails from "../components/Products/ProductDetails";
-import FeaturedHomePc from "../components/Products/FeaturedHomePc";
-import ProductGrid from "../components/Products/ProductGrid"
-import {useDispatch,useSelector} from "react-redux"
-import { useEffect, useState } from "react";
-import axios from "axios"
-import {fetchProductsByFilters} from "../redux/slices/productsSlice"
+import ProductGrid from "../components/Products/ProductGrid";
+import { fetchProductsByFilters } from "../redux/slices/productsSlice";
 
- 
 const Home = () => {
-  const dispatch=useDispatch()
-  const {products,loading,error}=useSelector((state)=>state.products)
-  const [bestSellerProduct,setBestSellerProduct]=useState(null)
+  const dispatch = useDispatch();
+  const { products, loading, error } = useSelector((s) => s.products);
 
-  useEffect(()=>{
-    dispatch(fetchProductsByFilters({
-      category:"sh",
-      limit:8
-    }))
-    //Fetch best seller
-  const fetchBestSeller=async()=>{
-  try{
-    const response =await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/api/products/best-seller`
-    )
-    setBestSellerProduct(response.data)
-  } catch(error){
-    console.error(error)
-  }
-}
-  fetchBestSeller()
-  },[dispatch])
+  useEffect(() => {
+    // load featured / all products for homepage
+    dispatch(fetchProductsByFilters({}));
+  }, [dispatch]);
 
   return (
     <div>
       <Hero_temp />
-      <PCCollection />
-      <NewArrivals />
-      <p className="text-center font-bold text-black text-2xl">BEST SELLER</p>
-      {bestSellerProduct ? (
-        <ProductDetails productId={bestSellerProduct._id}/>
-      ):(
-        <p className="text-center">Loading the best seller product ...</p>
-      )}
-      <ProductGrid products={products} loading={loading} error={error}/>
-      <FeaturedHomePc />
-      <ProductDetails />
+      <section className="container mx-auto px-4 py-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">Featured Products</h2>
+          <p className="text-sm text-gray-500">Curated picks for you</p>
+        </div>
+
+        <div className="bg-transparent">
+          {loading && <p>Loading products...</p>}
+          {error && <p className="text-red-600">Error loading products</p>}
+          {!loading && !error && (
+            <ProductGrid products={products.slice(0, 12)} gridCols={4} />
+          )}
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-4">New Arrivals</h3>
+          <ProductGrid products={products.slice(12, 24)} gridCols={4} />
+        </div>
+      </section>
     </div>
   );
 };

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useParams, Link, useNavigate } from "react-router-dom";
 
 const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
 
-const OrderDetailsPage = () => {
+const AdminOrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -24,10 +24,11 @@ const OrderDetailsPage = () => {
       try {
         const token = getToken();
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        // use the same endpoint as the user page which returns populated user
         const res = await axios.get(`${BACKEND}/api/orders/${id}`, { headers });
         setOrder(res.data);
       } catch (err) {
-        setError(err.response?.data?.message || err.message || "Order not found");
+        setError(err.response?.data?.message || err.message || "Failed to load order");
       } finally {
         setLoading(false);
       }
@@ -36,22 +37,16 @@ const OrderDetailsPage = () => {
   }, [id]);
 
   if (loading) return <div className="p-6">Loading order...</div>;
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
-  if (!order) return <div className="p-6">No Order details found</div>;
+  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (!order) return <div className="p-6">Order not found</div>;
 
   const itemsTotal = order.orderItems?.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 1)), 0) || 0;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white rounded shadow">
+    <div className="max-w-5xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Order {String(order._id).slice(0, 12)}</h2>
-          <div className="text-sm text-gray-500">Placed: {order.createdAt ? new Date(order.createdAt).toLocaleString() : ""}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-600">Status: {order.paymentStatus || (order.isPaid ? "paid" : "pending")}</div>
-          <div className="text-lg font-semibold mt-1">FCFA {Number(order.totalPrice || itemsTotal).toLocaleString()}</div>
-        </div>
+        <h1 className="text-2xl font-semibold">Order Details</h1>
+        <div className="text-sm text-gray-500">#{order._id}</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -124,28 +119,17 @@ const OrderDetailsPage = () => {
               <div>
                 <div className="font-medium">{order.user.name || order.user.email}</div>
                 <div className="text-sm text-gray-500">{order.user.email}</div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3">
                   <button
-                    onClick={() => navigate("/profile")}
-                    className="btn-ghost w-full py-2 rounded"
+                    onClick={() => navigate("/admin/users", { state: { selectedUserId: order.user._id } })}
+                    className="btn-primary w-full"
                   >
-                    My Profile
-                  </button>
-                  <button
-                    onClick={() => navigate("/")}
-                    className="btn-primary w-full py-2"
-                  >
-                    Back to shop
+                    View Customer Profile
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="text-gray-500">
-                Guest order
-                <div className="mt-3">
-                  <Link to="/" className="text-sm text-blue-600">Back to shop</Link>
-                </div>
-              </div>
+              <div className="text-gray-500">Guest order</div>
             )}
           </div>
 
@@ -158,4 +142,4 @@ const OrderDetailsPage = () => {
   );
 };
 
-export default OrderDetailsPage;
+export default AdminOrderDetails;
