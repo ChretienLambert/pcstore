@@ -7,8 +7,10 @@ const UserLayout = () => {
       {/*Header*/}
       <Header />
       {/*Main content*/}
-      <main>
-        <Outlet />
+      <main className="bg-gray-50 min-h-screen">
+        <div className="container mx-auto px-4 py-8">
+          <Outlet />
+        </div>
       </main>
       {/*Footer*/}
       <Footer />

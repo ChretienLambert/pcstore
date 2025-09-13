@@ -1,172 +1,128 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import axios from "axios";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { clearCart } from "../../redux/slices/cartSlice";
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const dispatch=useDispatch()
-  const {cart,loading,error}=useSelector((state)=>state.cart)
-  const {user}=useSelector((state)=>state.auth)
+  const dispatch = useDispatch();
 
-  const [shippingAddress, setShippingAddress] = useState({
-    firstName: "",
-    lastName: "",
+  // read cart properly from redux (cartSlice stores { cart: { products: [...] } })
+  const cartState = useSelector((s) => s.cart || {});
+  const products = cartState?.cart?.products || [];
+
+  const [address, setAddress] = useState({
     address: "",
     city: "",
-    phone: "",
+    postalCode: "",
+    country: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  //Ensure cart is loaded before proceeding
-  useEffect(()=>{
-    if(!cart||!cart.products||cart.products.length===0){
-      navigate("/")
+  const computeTotals = (items) => {
+    const itemsPrice = items.reduce(
+      (s, it) => s + (Number(it.price || 0) * Number(it.quantity || 1)),
+      0
+    );
+    const shippingPrice = 0;
+    const taxPrice = 0;
+    const totalPrice = itemsPrice + shippingPrice + taxPrice;
+    return { itemsPrice, shippingPrice, taxPrice, totalPrice };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!products || products.length === 0) return setError("Cart is empty");
+    if (!address.address || !address.city || !address.postalCode || !address.country)
+      return setError("Complete shipping address");
+
+    const checkoutItems = products.map((p) => ({
+      productId: p.productId || p.product || p._id,
+      name: p.name,
+      image: p.image,
+      price: Number(p.price || 0),
+      quantity: Number(p.quantity || 1),
+      size: p.size,
+      color: p.color,
+    }));
+
+    const totals = computeTotals(checkoutItems);
+
+    const payload = {
+      checkoutItems,
+      shippingAddress: address,
+      paymentMethod,
+      totalPrice: totals.totalPrice,
+    };
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("userToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      // 1) create checkout session
+      const createRes = await axios.post(`${BACKEND}/api/checkout`, payload, { headers });
+      const checkout = createRes.data;
+      if (!checkout || !checkout._id) throw new Error("Failed to create checkout session");
+
+      // 2) simulate payment -> mark checkout as paid
+      const payPayload = { paymentStatus: "paid", paymentDetails: { method: paymentMethod, provider: "simulated" } };
+      await axios.put(`${BACKEND}/api/checkout/${checkout._id}/pay`, payPayload, { headers });
+
+      // 3) finalize checkout into an order
+      const finalizeRes = await axios.post(`${BACKEND}/api/checkout/${checkout._id}/finalize`, {}, { headers });
+      const order = finalizeRes.data;
+      if (!order || !order._id) throw new Error("Failed to finalize order");
+
+      // 4) clear client cart (redux + localStorage)
+      try {
+        dispatch(clearCart());
+        localStorage.removeItem("cart");
+      } catch (err) {
+        // ignore
+      }
+
+      setLoading(false);
+      navigate(`/order/${order._id}`);
+    } catch (err) {
+      setLoading(false);
+      setError(err.response?.data?.message || err.message || "Checkout failed");
     }
-  },[cart,navigate])
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto py-10 px-6 tracking-tighter">
-      {/*Left Part*/}
-      <div className="bg-white rounded-lg p-6">
-        <h2 className="text-2xl uppercase mb-6">Checkout</h2>
-        <form>
-          <h3 className="text-lg mb-4">Contact Details</h3>
-          <div className="mb-4">
-            <label className="block text-gray-700">Email</label>
-            <input
-              type="email"
-              value={user? user.email:""}
-              className="w-full p-2 border rounded"
-              disabled
-            />
-          </div>
-          <h3 className="text-lg mb-4">Delivery</h3>
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">First Name</label>
-              <input
-                type="text"
-                value={shippingAddress.firstName}
-                onChange={(e) =>
-                  setShippingAddress({
-                    ...shippingAddress,
-                    firstName: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-              />
-            </div>
-          </div>
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">Last Name</label>
-              <input
-                type="text"
-                value={shippingAddress.lastName}
-                onChange={(e) =>
-                  setShippingAddress({
-                    ...shippingAddress,
-                    lastName: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-              />
-            </div>
-          </div>
-          <div className="mb-4">
-            <div>
-              <label className="block text-gray-700">Address</label>
-              <input
-                type="text"
-                value={shippingAddress.address}
-                onChange={(e) =>
-                  setShippingAddress({
-                    ...shippingAddress,
-                    address: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-          </div>
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">City</label>
-              <input
-                type="text"
-                value={shippingAddress.city}
-                onChange={(e) =>
-                  setShippingAddress({
-                    ...shippingAddress,
-                    city: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-              />
-            </div>
-          </div>
-          <div className="mb-4 grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-gray-700">Phone</label>
-              <input
-                type="text"
-                value={shippingAddress.phone}
-                onChange={(e) =>
-                  setShippingAddress({
-                    ...shippingAddress,
-                    phone: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-              />
-            </div>
-          </div>
-        </form>
-      </div>
-      {/* Right Part*/}
-      <div className="bg-gray-50 p-6 rounded-lg">
-        <h3 className="text-lg mb-4">Order Summary</h3>
-        <div className="border-t py-4 mb-4">
-          {cart.products.map((product, index) => (
-            <div
-              key={index}
-              className="flex items-start justify-between py-2 border-b"
-            >
-              <div className="flex items-start">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-20 h-24 object-cover mr-4"
-                />
-                <div>
-                  <h3 className="text-md">{product.name}</h3>
-                  <p className="text-gray-500">Size: {product.size}</p>
-                  <p className="text-gray-500">Color: {product.color}</p>
-                  <p className="text-gray-500">Material: {product.material}</p>
-                  <p className="text-gray-500">
-                    Dimension: {product.dimension}
-                  </p>
-                  <p className="text-gray-500">Quantiy: {product.quantity}</p>
-                  <p className="text-gray-500">Price: {product.price}</p>
-                </div>
-              </div>
-              <p className="text-xl">{product.price?.toLocaleString} FCFA</p>
-            </div>
-          ))}
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow">
+      <h2 className="text-xl font-bold mb-4">Checkout</h2>
+      {error && <p className="text-red-600 mb-2">{error}</p>}
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <input placeholder="Address" value={address.address} onChange={(e)=>setAddress({...address,address:e.target.value})} className="p-2 border" />
+          <input placeholder="City" value={address.city} onChange={(e)=>setAddress({...address,city:e.target.value})} className="p-2 border" />
+          <input placeholder="Postal Code" value={address.postalCode} onChange={(e)=>setAddress({...address,postalCode:e.target.value})} className="p-2 border" />
+          <input placeholder="Country" value={address.country} onChange={(e)=>setAddress({...address,country:e.target.value})} className="p-2 border" />
         </div>
-        <div className="flex justify-between items-center text-lg">
-          <p>Subtotal</p>
-          <p>{cart.totalPrice?.toLocaleString()}</p>
+
+        <div className="mt-4">
+          <label className="block mb-2">Payment</label>
+          <select value={paymentMethod} onChange={(e)=>setPaymentMethod(e.target.value)} className="p-2 border">
+            <option value="cod">Cash on Delivery</option>
+            <option value="card">Card (placeholder)</option>
+          </select>
         </div>
-        <div className="flex justify-between items-center text-lg">
-          <p>Shipping</p>
-          <p>FREE</p>
+
+        <div className="mt-6 flex justify-end">
+          <button disabled={loading} type="submit" className="bg-[#5C5CFF] text-white py-2 px-4 rounded hover:bg-blue-600">
+            {loading ? "Processing..." : "Place Order"}
+          </button>
         </div>
-        <div className="flex justify-between items-center text-lg mt-4 border-t pt-4">
-          <p>Total</p>
-          <p>{cart.totalPrice?.toLocaleString()} FCFA</p>
-        </div>
-      </div>
+      </form>
     </div>
   );
 };

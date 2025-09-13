@@ -26,17 +26,18 @@ export const fetchAllOrders = createAsyncThunk(
   }
 );
 
-// update order delivery status
+// update order delivery status (accepts id and partial update object)
 export const updateOrderStatus = createAsyncThunk(
   "adminOrders/updateOrderStatus",
-  async ({ id, status }, { rejectWithValue }) => {
+  async ({ id, update }, { rejectWithValue }) => {
     try {
       const headers = {};
       const bearer = getBearerToken();
       if (bearer) headers.Authorization = bearer;
+      // send update object directly so backend receives fields like { isDelivered, paymentStatus, isPaid }
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/api/admin/orders/${id}`,
-        { status },
+        update,
         { headers }
       );
       return response.data;
@@ -54,7 +55,10 @@ export const deleteOrder = createAsyncThunk(
       const headers = {};
       const bearer = getBearerToken();
       if (bearer) headers.Authorization = bearer;
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/admin/orders/${id}`, { headers });
+      await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/api/admin/orders/${id}`,
+        { headers }
+      );
       return id;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -98,7 +102,9 @@ const adminOrderSlice = createSlice({
         if (idx !== -1) state.orders[idx] = updatedOrder;
       })
       .addCase(deleteOrder.fulfilled, (state, action) => {
-        state.orders = state.orders.filter((order) => order._id !== action.payload);
+        state.orders = state.orders.filter(
+          (order) => order._id !== action.payload
+        );
       });
   },
 });

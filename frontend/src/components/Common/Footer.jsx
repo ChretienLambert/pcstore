@@ -3,8 +3,25 @@ import { TbBrandMeta } from "react-icons/tb";
 import { IoLogoInstagram } from "react-icons/io";
 import { RiTwitterXLine } from "react-icons/ri";
 import { FiPhoneCall } from "react-icons/fi";
+import { useState } from "react";
+import axios from "axios";
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState(null);
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!email) return setStatus({ ok: false, msg: "Email required" });
+    try {
+      const res = await axios.post(`${BACKEND}/api/subscribe`, { email });
+      setStatus({ ok: true, msg: res.data.message || "Subscribed" });
+      setEmail("");
+    } catch (err) {
+      setStatus({ ok: false, msg: err.response?.data?.message || err.message });
+    }
+  };
   return (
     <footer className="border-t py-12 bg-white">
       <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 px-6">
@@ -16,12 +33,13 @@ const Footer = () => {
           </p>
           <p className="font-medium text-sm text-gray-600 mb-2">Sign up</p>
 
-          <form className="flex md:justify-center">
+          <form onSubmit={handleSubscribe} className="flex md:justify-center">
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your e-mail"
-              className="p-3 w-full md:w-64 text-sm border border-gray-500 rounded-l-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all"
-              required
+              className="p-3 w-full md:w-64 text-sm border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all"
             />
             <button
               type="submit"
@@ -30,6 +48,11 @@ const Footer = () => {
               Subscribe
             </button>
           </form>
+          {status && (
+            <p className={`mt-2 text-sm ${status.ok ? "text-green-600" : "text-red-600"}`}>
+              {status.msg}
+            </p>
+          )}
         </div>
 
         {/* Shop Links */}
