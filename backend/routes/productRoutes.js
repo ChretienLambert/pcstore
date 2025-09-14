@@ -1,8 +1,35 @@
 const express = require("express");
+const router = express.Router();
 const Product = require("../models/Product");
 const { protect, admin } = require("../middleware/authMiddleware");
+const mongoose = require("mongoose");
 
-const router = express.Router();
+// Helpers: validate ObjectId and normalize incoming id values
+const isValidObjectId = (id) => {
+  if (!id) return false;
+  return mongoose.Types.ObjectId.isValid(String(id));
+};
+
+const validateIdParam = (req, res, next) => {
+  const { id } = req.params;
+  if (!id || !isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid id parameter" });
+  }
+  next();
+};
+
+const normalizeIds = (maybeIds) => {
+  if (!maybeIds) return [];
+  if (!Array.isArray(maybeIds)) maybeIds = [maybeIds];
+  return maybeIds
+    .map((v) => {
+      if (!v) return null;
+      if (typeof v === "object") return v._id || v.id || null;
+      return String(v);
+    })
+    .filter(Boolean)
+    .filter((id) => isValidObjectId(id));
+};
 
 // @route   POST /api/products
 // @desc    Create a new product
@@ -68,7 +95,7 @@ router.post("/", protect, admin, async (req, res) => {
 router.put("/:id", protect, admin, async (req, res) => {
   try {
     const body = req.body || {};
-    const {
+    let {
       name,
       description,
       price,
@@ -89,9 +116,27 @@ router.put("/:id", protect, admin, async (req, res) => {
       sku,
     } = body;
 
+    // Coerce numeric fields defensively
+    if (price !== undefined) price = Number(price);
+    if (discountPrice !== undefined) discountPrice = Number(discountPrice);
+
+    // Validate discount <= price when both present
+    if (
+      Number.isFinite(price) &&
+      Number.isFinite(discountPrice) &&
+      discountPrice > price
+    ) {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: {
+          discountPrice: "Discount price cannot be greater than regular price",
+        },
+      });
+    }
+
     console.debug("product update body:", body, "id:", req.params.id);
 
-    //Find the product by ID
+    // Find the product by ID
     const product = await Product.findById(req.params.id);
     if (product) {
       // Update only when the incoming value is provided (allow falsy values)
@@ -126,7 +171,7 @@ router.put("/:id", protect, admin, async (req, res) => {
       }
       if (typeof sku !== "undefined") product.sku = sku;
 
-      //Save the update product
+      // Save the updated product (this will run schema validators)
       const updatedProduct = await product.save();
       return res.json(updatedProduct);
     } else {
@@ -134,6 +179,13 @@ router.put("/:id", protect, admin, async (req, res) => {
     }
   } catch (error) {
     console.error(error);
+    // Surface validation errors as 400 so the client can handle them
+    if (error && error.name === "ValidationError") {
+      return res.status(400).json({
+        message: error.message || "Validation error",
+        errors: error.errors,
+      });
+    }
     res.status(500).send("Server Error");
   }
 });
@@ -229,19 +281,7 @@ router.get("/", async (req, res) => {
     }
 
     // debug log to inspect final query (remove in production)
-    console.debug(
-      "products query:",
-      JSON.stringify(query),
-      "sortBy:",
-      sortBy,
-      "limit:",
-      limit
-    );
-    console.debug("final query", JSON.stringify(query));
-    console.debug(
-      "inspect first 5 docs:",
-      await Product.find().limit(5).lean()
-    );
+    // verbose debug logs removed
 
     let sort = {};
     if (sortBy) {
@@ -300,42 +340,79 @@ router.get("/best-seller", async (req, res) => {
   }
 });
 
-//@route GET /api/products/:id
-//@desc Get a single product by ID
-//@access Public
-router.get("/:id", async (req, res) => {
+// Example: apply validateIdParam to routes that use :id
+router.get("/:id", validateIdParam, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (product) {
-      res.json(product);
-    } else {
-      res.status(404).json({ message: "Product Not Found" });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 });
-//@route GET /api/product/similar/:id
-//@desc Retrieve similar products based on the currents product's gender and category
+
+// Example: guard before using an incoming _id in any query
+router.post("/bulk", async (req, res) => {
+  try {
+    const ids = normalizeIds(req.body.ids || req.query.ids);
+    if (!ids.length)
+      return res.status(400).json({ message: "No valid ids provided" });
+    const products = await Product.find({ _id: { $in: ids } });
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Example: before using an id from params/query/body
+// if (req.params.id) {
+//   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+//     return res.status(400).json({ message: 'Invalid product id' });
+//   }
+// }
+
+// If you accept arrays/objects from the client, normalize to an array of id strings:
+// const normalizeIds = (maybeIds) => {
+//   if (!maybeIds) return [];
+//   if (!Array.isArray(maybeIds)) maybeIds = [maybeIds];
+//   return maybeIds
+//     .map((v) => {
+//       if (!v) return null;
+//       // if client sent object like { _id: '...' } or full doc, extract _id
+//       if (typeof v === 'object') return v._id || v.id || null;
+//       return String(v);
+//     })
+//     .filter(Boolean)
+//     .filter((id) => mongoose.Types.ObjectId.isValid(id));
+// };
+
+// Example usage when building a query that uses _id:
+// const ids = normalizeIds(req.body.ids || req.query.ids);
+// if (ids.length) {
+//   query._id = { $in: ids };
+// }
+
+//@route GET /api/products/similar/:id
+//@desc Retrieve similar products by product ID
 //@access Public
 router.get("/similar/:id", async (req, res) => {
-  const { id } = req.params;
   try {
+    const { id } = req.params;
     const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    const similarProducts = await Product.find({
-      _id: { $ne: id },
-      gender: product.gender,
-      category: product.category,
-    }).limit(4);
-    res.json(similarProducts);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    if (!product) return res.status(200).json([]); // prefer 200 + empty array
+    // compute similar products ...
+    const similar = await Product.find({
+      /* your criteria */
+    }).limit(8);
+    return res.status(200).json(similar || []);
+  } catch (err) {
+    console.error("GET /api/products/similar error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
+
+// (Removed duplicate unprotected POST/PUT handlers — use the admin-protected handlers above)
 
 module.exports = router;

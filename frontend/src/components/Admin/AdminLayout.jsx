@@ -1,14 +1,14 @@
-import { useState } from "react"
-import { FaBars } from "react-icons/fa"
-import AdminSidebar from "./AdminSidebar"
-import { Outlet } from "react-router-dom"
+import { useState } from "react";
+import { FaBars } from "react-icons/fa";
+import AdminSidebar from "./AdminSidebar";
+import { Outlet } from "react-router-dom";
 
 const AdminLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen)
-  }
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row relative">
@@ -44,7 +44,7 @@ const AdminLayout = () => {
         <Outlet />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AdminLayout
+export default AdminLayout;

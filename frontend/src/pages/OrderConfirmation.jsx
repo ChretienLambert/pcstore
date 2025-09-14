@@ -1,40 +1,22 @@
-import { Link } from "react-router-dom";
-
-const checkout = {
-  _id: "123321",
-  createdAt: new Date(),
-  checkoutItems: [
-    {
-      productId: "1",
-      name: "DELL BUSINESS PC",
-      price: 400000,
-      brand: "DELL",
-      material: "Plastic",
-      size: "Compact",
-      color: "Red",
-      image: "https://picsum.photos/500/500?random=1",
-      qty: 1, // added quantity
-    },
-    {
-      productId: "2",
-      name: "DELL 2 BUSINESS PC",
-      price: 400000,
-      brand: "DELL",
-      material: "Plastic",
-      size: "Compact",
-      color: "Red",
-      image: "https://picsum.photos/500/500?random=2",
-      qty: 2, // added quantity
-    },
-  ],
-  shippingAddress: {
-    address: "Douala",
-    city: "Yassa",
-    country: "Cameroon",
-  },
-};
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { clearCart } from "../redux/slices/cartSlice";
 
 const OrderConfirmation = () => {
+  const dispatch=useDispatch()
+  const navigate=useNavigate()
+  const {checkout}=useSelector((state)=>state.checkout)
+
+  //clear the cart when the order is confirmed
+  useEffect(()=>{
+    if (checkout&&checkout._id){
+      dispatch(clearCart())
+      localStorage.removeItem("cart")
+    }else{
+      navigate("/my-orders")
+    }
+  },[checkout,dispatch,navigate])
   const calculateEstimatedDelivery = (createdAt) => {
     const orderDate = new Date(createdAt);
     orderDate.setDate(orderDate.getDate() + 10);
@@ -52,7 +34,9 @@ const OrderConfirmation = () => {
           <div className="flex justify-between mb-20">
             {/* Order Id and Date */}
             <div>
-              <h2 className="text-xl font-semibold">Order ID: {checkout._id}</h2>
+              <h2 className="text-xl font-semibold">
+                Order ID: {checkout._id}
+              </h2>
               <p className="text-gray-500">
                 Order date: {new Date(checkout.createdAt).toLocaleDateString()}
               </p>
@@ -61,7 +45,8 @@ const OrderConfirmation = () => {
             {/* Estimated Delivery */}
             <div>
               <p className="text-emerald-700 text-sm">
-                Estimated Delivery: {calculateEstimatedDelivery(checkout.createdAt)}
+                Estimated Delivery:{" "}
+                {calculateEstimatedDelivery(checkout.createdAt)}
               </p>
             </div>
           </div>
@@ -100,9 +85,12 @@ const OrderConfirmation = () => {
             {/* Delivery Info */}
             <div>
               <h4 className="text-lg font-semibold mb-2">Delivery</h4>
-              <p className="text-gray-600">{checkout.shippingAddress.address}</p>
               <p className="text-gray-600">
-                {checkout.shippingAddress.city}, {checkout.shippingAddress.country}
+                {checkout.shippingAddress.address}
+              </p>
+              <p className="text-gray-600">
+                {checkout.shippingAddress.city},{" "}
+                {checkout.shippingAddress.country}
               </p>
             </div>
           </div>
@@ -123,4 +111,3 @@ const OrderConfirmation = () => {
 };
 
 export default OrderConfirmation;
-

@@ -6,7 +6,7 @@ const Header = () => {
       <Topbar />
       <Navbar />
     </header>
-  )
+  );
 };
 
 export default Header;

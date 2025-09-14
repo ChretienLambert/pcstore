@@ -1,61 +1,55 @@
 const express = require("express");
+const router = express.Router();
 const Order = require("../models/Order");
 const { protect, admin } = require("../middleware/authMiddleware");
 
-const router = express.Router();
-
-//@route GET /api/admin/orders
-//@desc Get all order (Admin only)
-//@access Private/Admin
+// GET /api/admin/orders - list all orders (populated)
 router.get("/", protect, admin, async (req, res) => {
   try {
-    const orders = await Order.find({}).populate("user", "name email");
-    res.json(orders);
-  } catch {
-    console.error(error);
-    res.status(500).send("Server Error");
+    const orders = await Order.find()
+      .sort({ createdAt: -1 })
+      .populate("user", "name email role")
+      .lean();
+    return res.json(orders);
+  } catch (err) {
+    console.error("GET admin/orders error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
-//@route PUT /api/admin/orders/:id
-//@desc Update order status
-//@access Private/Admin
+// PUT /api/admin/orders/:id - update order fields (isDelivered, paymentStatus, isPaid)
 router.put("/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (order) {
-      order.status = req.body.status || order.status;
-      order.isDelivered =
-        req.body.status === "Delivered" ? true : order.isDelivered;
-      order.deliveredAt =
-        req.body.status === "Delivered" ? Date.now() : order.deliveredAt;
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
-      const updatedOrder = await order.save();
-      res.json(updatedOrder);
-    } else {
-      res.status(400).json({ message: "Order not found" });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    if (typeof req.body.isDelivered !== "undefined")
+      order.isDelivered = Boolean(req.body.isDelivered);
+    if (typeof req.body.isPaid !== "undefined")
+      order.isPaid = Boolean(req.body.isPaid);
+    if (typeof req.body.paymentStatus !== "undefined")
+      order.paymentStatus = req.body.paymentStatus;
+    if (req.body.paidAt) order.paidAt = req.body.paidAt;
+
+    const updated = await order.save();
+    await updated.populate("user", "name email role");
+    return res.json(updated);
+  } catch (err) {
+    console.error("PUT admin/orders/:id error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
-//@route DELETE /api/admin/orders/:id
-//@desc Delete an order
-//@access Private/Admin
+// DELETE /api/admin/orders/:id
 router.delete("/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (order) {
-      await order.deleteOne();
-      res.json({ message: "Order removed" });
-    } else {
-      res.status(404).json({ message: "Order not found" });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    await order.deleteOne();
+    return res.json({ message: "Order removed" });
+  } catch (err) {
+    console.error("DELETE admin/orders/:id error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 

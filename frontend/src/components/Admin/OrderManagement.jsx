@@ -1,70 +1,86 @@
+import axios from "axios";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllOrders, deleteOrder } from "../../redux/slices/adminOrderSlice";
+import { useNavigate } from "react-router-dom";
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
+
 const OrderManagement = () => {
-    const orders=[
-        {
-            _id:1234,
-            user:{
-                name:"Prince"
-            },
-            totalPrice:100,
-            status:"Processing"
-        }
-    ]
-    const handleStatusChange=(orderId,status)=>{
-      console.log({id:orderId,status})
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { orders, loading, error } = useSelector((state) => state.adminOrders || { orders: [], loading: false, error: null });
+
+  useEffect(() => {
+    dispatch(fetchAllOrders());
+  }, [dispatch]);
+
+  // accept the id (string) — ensure callers pass order._id
+  const viewOrder = (orderId) => {
+    if (!orderId) return;
+    navigate(`/admin/orders/${orderId}`);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this order?")) return;
+    try {
+      await dispatch(deleteOrder(id)).unwrap();
+      await dispatch(fetchAllOrders());
+    } catch (err) {
+      alert(err?.message || "Delete failed");
     }
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p className="text-red-600">Error: {String(error)}</p>;
+
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <h2 className="text-2xl font-vold mb-6">Order Management</h2>
-      <div className="overflow-x-auto shadow-md sm:rounded-lg">
-        <table className="min-w-full text-left text-gray-500">
-          <thead className="bg-gray-100 text-xs uppercase text-gray-700">
-            <tr>
-              <th className="py-3 px-4">Order ID</th>
-              <th className="py-3 px-4">Customer</th>
-              <th className="py-3 px-4">Total Price</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Actions</th>
+      <h2 className="text-2xl font-bold mb-4">Orders</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full table-auto text-left">
+          <thead className="bg-gray-50">
+            <tr className="text-sm text-gray-600">
+              <th className="p-3">Order</th>
+              <th className="p-3">Customer</th>
+              <th className="p-3">Items</th>
+              <th className="p-3">Total</th>
+              <th className="p-3">Payment</th>
+              <th className="p-3">Delivered</th>
+              <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.length > 0 ? (
-              orders.map((order)=>
-              <tr key={order._id} className="border-b hover:bg-gray-50 cursor-pointer">
-                <td className="py-4 px-4 font-medium text-gray-900 whitespace-nowrap">
-                  #{order._id}
+            {orders.map((order) => (
+              <tr key={order._id} className="border-b hover:bg-gray-50">
+                <td className="p-3">
+                  <button onClick={() => viewOrder(order._id)} className="text-left text-blue-700 hover:underline">
+                    #{String(order._id).slice(0, 8)}
+                  </button>
                 </td>
-                <td className="p-4">{order.user.name}</td>
-                <td className="p-4">{order.totalPrice}</td>
-                <td className="p-4">
-                  <select value={order.status} onChange={(e)=>handleStatusChange(order._id, e.target.value)}
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
-                    focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                      <option value="processing">Processing</option>
-                      <option value="processing">Shipped</option>
-                      <option value="processing">Delivered</option>
-                      <option value="processing">Cancelled</option>
-                    </select> 
-                    </td>
-                    <td className="p-4">
-                      <button onClick={()=>handleStatusChange(order._id,"Delivered")} className="bg-green-500 text-white px-4 py-2 rounded 
-                      hover:bg-green-600 cursor-pointer">
-                        Mark as Delivered
-
-                      </button>
-                    </td>
+                <td className="p-3">{order.user?.name || order.user?.email || "Guest"}</td>
+                <td className="p-3">{order.orderItems?.length || 0}</td>
+                <td className="p-3">FCFA {Number(order.totalPrice || 0).toLocaleString()}</td>
+                <td className="p-3">{order.isPaid ? "Paid" : "Pending"}</td>
+                <td className="p-3">{order.isDelivered ? "Yes" : "No"}</td>
+                <td className="p-3">
+                  <div className="flex gap-2">
+                    <button onClick={() => viewOrder(order._id)} className="bg-blue-600 text-white px-2 py-1 rounded">View</button>
+                    <button onClick={() => handleDelete(order._id)} className="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+                  </div>
+                </td>
               </tr>
-              )
-            ):(
+            ))}
+            {!loading && orders.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">No Orders Found</td>
+                <td colSpan={7} className="p-4 text-center text-gray-500">No orders found</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      
     </div>
-  )
-}
+  );
+};
 
-export default OrderManagement
+export default OrderManagement;

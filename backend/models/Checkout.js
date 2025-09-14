@@ -5,7 +5,8 @@ const checkoutItemSchema = new mongoose.Schema(
     productId: {
       type: mongoose.Schema.ObjectId,
       ref: "Product",
-      required: true,
+      // allow null for custom builds (isCustomBuild === true)
+      required: false,
     },
     name: {
       type: String,
@@ -23,6 +24,8 @@ const checkoutItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    size: String,
+    color: String,
   },
   { _id: false }
 );
