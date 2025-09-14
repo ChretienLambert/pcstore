@@ -13,10 +13,11 @@ import { useSelector } from "react-redux";
 const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [navdraweropen, setnavdraweropen] = useState(false);
-  const {cart}=useSelector((state)=>state.cart)
-  const {user}=useSelector((state)=>state.auth)
+  // Use cartItems from cart slice (single source of truth)
+  const cartItems = useSelector((state) => state.cart.cartItems || JSON.parse(localStorage.getItem("cart") || "[]"));
+  const { user } = useSelector((state) => state.auth);
 
-  const cartItemCount=cart?.products?.reduce((total,product)=>total+product.quantity,0)||0
+  const cartItemCount = (cartItems || []).reduce((total, product) => total + (Number(product.quantity || 0)), 0);
 
   const togglenavdrawer = () => {
     setnavdraweropen(!navdraweropen);

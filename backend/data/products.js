@@ -4,7 +4,7 @@ const products = [
   {
     name: "ASUS ROG Strix G16 Gaming Laptop",
     description:
-      "16\" gaming laptop with Intel Core i9, NVIDIA RTX 4080, 32GB DDR5, 1TB NVMe SSD, RGB keyboard, and advanced cooling.",
+      '16" gaming laptop with Intel Core i9, NVIDIA RTX 4080, 32GB DDR5, 1TB NVMe SSD, RGB keyboard, and advanced cooling.',
     price: 1499994,
     discountPrice: 1379994,
     countInStock: 8,
@@ -16,7 +16,10 @@ const products = [
     colors: ["Black"],
     material: "Aluminum",
     images: [
-      { url: "https://images.unsplash.com/photo-1611924638863-3a4f1b0f8d1c", altText: "ASUS ROG Strix G16" }
+      {
+        url: "https://images.unsplash.com/photo-1611924638863-3a4f1b0f8d1c",
+        altText: "ASUS ROG Strix G16",
+      },
     ],
     isFeatured: true,
     isPublished: true,
@@ -26,13 +29,14 @@ const products = [
     rating: 4.8,
     numReviews: 154,
     metaTitle: "ASUS ROG Strix G16 - RTX 4080 Gaming Laptop",
-    metaDescription: "Powerful 16-inch gaming laptop with Intel i9 and RTX 4080.",
-    metaKeywords: "asus rog, gaming laptop, rtx4080"
+    metaDescription:
+      "Powerful 16-inch gaming laptop with Intel i9 and RTX 4080.",
+    metaKeywords: "asus rog, gaming laptop, rtx4080",
   },
   {
     name: "Dell XPS 15 Creator Laptop",
     description:
-      "15.6\" creator laptop with Intel Core i7, NVIDIA RTX 4060, 32GB RAM, 1TB SSD, 4K OLED display optimized for content creators.",
+      '15.6" creator laptop with Intel Core i7, NVIDIA RTX 4060, 32GB RAM, 1TB SSD, 4K OLED display optimized for content creators.',
     price: 1319994,
     discountPrice: 1199994,
     countInStock: 12,
@@ -44,7 +48,10 @@ const products = [
     colors: ["Silver"],
     material: "Aluminum",
     images: [
-      { url: "https://images.unsplash.com/photo-1580910051072-0f3f9f0b3b6b", altText: "Dell XPS 15" }
+      {
+        url: "https://images.unsplash.com/photo-1580910051072-0f3f9f0b3b6b",
+        altText: "Dell XPS 15",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -55,7 +62,7 @@ const products = [
     numReviews: 98,
     metaTitle: "Dell XPS 15 Creator - 4K OLED",
     metaDescription: "Dell XPS 15 with 4K OLED and RTX 4060 for creators.",
-    metaKeywords: "dell xps, creator laptop, 4k oled"
+    metaKeywords: "dell xps, creator laptop, 4k oled",
   },
   {
     name: "Intel NUC 12 Mini PC",
@@ -72,7 +79,10 @@ const products = [
     colors: ["Black"],
     material: "Plastic/Aluminum",
     images: [
-      { url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d", altText: "Intel NUC Mini PC" }
+      {
+        url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d",
+        altText: "Intel NUC Mini PC",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -82,8 +92,9 @@ const products = [
     rating: 4.5,
     numReviews: 42,
     metaTitle: "Intel NUC 12 - Mini PC",
-    metaDescription: "Small form-factor Intel NUC with Core i7 for compact setups.",
-    metaKeywords: "intel nuc, mini pc"
+    metaDescription:
+      "Small form-factor Intel NUC with Core i7 for compact setups.",
+    metaKeywords: "intel nuc, mini pc",
   },
   {
     name: "Custom Gaming Desktop - RTX 4070 Ti",
@@ -100,7 +111,10 @@ const products = [
     colors: ["Black"],
     material: "Steel/Plastic",
     images: [
-      { url: "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7", altText: "Custom Gaming Desktop" }
+      {
+        url: "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7",
+        altText: "Custom Gaming Desktop",
+      },
     ],
     isFeatured: true,
     isPublished: true,
@@ -110,13 +124,14 @@ const products = [
     rating: 4.9,
     numReviews: 63,
     metaTitle: "Custom Gaming Desktop - RTX 4070 Ti",
-    metaDescription: "High-performance custom desktop for gamers and streamers.",
-    metaKeywords: "gaming desktop, rtx 4070 ti"
+    metaDescription:
+      "High-performance custom desktop for gamers and streamers.",
+    metaKeywords: "gaming desktop, rtx 4070 ti",
   },
   {
     name: "HP Envy All-in-One 27",
     description:
-      "27\" all-in-one PC featuring Intel Core i5, 16GB RAM, 512GB SSD and UHD display — clean setup for home office.",
+      '27" all-in-one PC featuring Intel Core i5, 16GB RAM, 512GB SSD and UHD display — clean setup for home office.',
     price: 719994,
     discountPrice: 659994,
     countInStock: 7,
@@ -128,7 +143,10 @@ const products = [
     colors: ["Silver"],
     material: "Aluminum/Glass",
     images: [
-      { url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8", altText: "HP Envy All-in-One" }
+      {
+        url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
+        altText: "HP Envy All-in-One",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -139,7 +157,7 @@ const products = [
     numReviews: 37,
     metaTitle: "HP Envy All-in-One 27",
     metaDescription: "27-inch all-in-one PC with UHD display for home office.",
-    metaKeywords: "hp envy, all-in-one"
+    metaKeywords: "hp envy, all-in-one",
   },
   {
     name: "Workstation Tower - Ryzen Threadripper",
@@ -156,7 +174,10 @@ const products = [
     colors: ["Black"],
     material: "Steel",
     images: [
-      { url: "https://images.unsplash.com/photo-1555617117-08bda36f2a8d", altText: "Workstation Tower" }
+      {
+        url: "https://images.unsplash.com/photo-1555617117-08bda36f2a8d",
+        altText: "Workstation Tower",
+      },
     ],
     isFeatured: true,
     isPublished: true,
@@ -166,13 +187,14 @@ const products = [
     rating: 4.9,
     numReviews: 18,
     metaTitle: "Threadripper Workstation",
-    metaDescription: "High-end workstation for professionals with Threadripper CPU.",
-    metaKeywords: "workstation, threadripper"
+    metaDescription:
+      "High-end workstation for professionals with Threadripper CPU.",
+    metaKeywords: "workstation, threadripper",
   },
   {
     name: "Lenovo Legion Slim 7 Gaming Laptop",
     description:
-      "16\" thin-and-light gaming laptop with AMD Ryzen 9, NVIDIA RTX 4060, 32GB RAM, 1TB SSD and high-refresh display.",
+      '16" thin-and-light gaming laptop with AMD Ryzen 9, NVIDIA RTX 4060, 32GB RAM, 1TB SSD and high-refresh display.',
     price: 1079994,
     discountPrice: 1019994,
     countInStock: 10,
@@ -184,7 +206,10 @@ const products = [
     colors: ["Black"],
     material: "Aluminum",
     images: [
-      { url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d", altText: "Lenovo Legion Slim 7" }
+      {
+        url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d",
+        altText: "Lenovo Legion Slim 7",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -195,7 +220,7 @@ const products = [
     numReviews: 76,
     metaTitle: "Lenovo Legion Slim 7",
     metaDescription: "Slim gaming laptop with Ryzen 9 and RTX 4060.",
-    metaKeywords: "lenovo legion, gaming laptop"
+    metaKeywords: "lenovo legion, gaming laptop",
   },
   {
     name: "Acer Predator Helios Desktop",
@@ -212,7 +237,10 @@ const products = [
     colors: ["Black"],
     material: "Steel/Plastic",
     images: [
-      { url: "https://images.unsplash.com/photo-1585079541039-5c6e9d5a3d2c", altText: "Acer Predator Helios Desktop" }
+      {
+        url: "https://images.unsplash.com/photo-1585079541039-5c6e9d5a3d2c",
+        altText: "Acer Predator Helios Desktop",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -223,7 +251,7 @@ const products = [
     numReviews: 54,
     metaTitle: "Acer Predator Helios Desktop",
     metaDescription: "Prebuilt gaming desktop with RTX 4070.",
-    metaKeywords: "acer predator, gaming desktop"
+    metaKeywords: "acer predator, gaming desktop",
   },
   {
     name: "Apple MacBook Pro 16 M3 Max",
@@ -240,7 +268,10 @@ const products = [
     colors: ["Space Gray"],
     material: "Aluminum",
     images: [
-      { url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8", altText: "MacBook Pro 16" }
+      {
+        url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
+        altText: "MacBook Pro 16",
+      },
     ],
     isFeatured: true,
     isPublished: true,
@@ -251,7 +282,7 @@ const products = [
     numReviews: 210,
     metaTitle: "MacBook Pro 16 M3 Max",
     metaDescription: "Apple MacBook Pro 16-inch with M3 Max for pros.",
-    metaKeywords: "macbook pro, m3 max"
+    metaKeywords: "macbook pro, m3 max",
   },
   {
     name: "MSI Creator P100A Desktop",
@@ -268,7 +299,10 @@ const products = [
     colors: ["Black"],
     material: "Aluminum/Plastic",
     images: [
-      { url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e", altText: "MSI Creator Desktop" }
+      {
+        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
+        altText: "MSI Creator Desktop",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -279,7 +313,7 @@ const products = [
     numReviews: 29,
     metaTitle: "MSI Creator P100A",
     metaDescription: "Creator desktop for editing and streaming.",
-    metaKeywords: "msi creator, desktop"
+    metaKeywords: "msi creator, desktop",
   },
   {
     name: "Beelink Mini Gaming PC (Intel Arc)",
@@ -296,7 +330,10 @@ const products = [
     colors: ["Black"],
     material: "Aluminum/Plastic",
     images: [
-      { url: "https://images.unsplash.com/photo-1593642532973-d31b6557fa68", altText: "Beelink Mini Gaming PC" }
+      {
+        url: "https://images.unsplash.com/photo-1593642532973-d31b6557fa68",
+        altText: "Beelink Mini Gaming PC",
+      },
     ],
     isFeatured: false,
     isPublished: true,
@@ -306,9 +343,57 @@ const products = [
     rating: 4.3,
     numReviews: 21,
     metaTitle: "Beelink Mini Gaming PC",
-    metaDescription: "Compact Intel Arc mini PC for light gaming and streaming.",
-    metaKeywords: "mini pc, intel arc"
-  }
+    metaDescription:
+      "Compact Intel Arc mini PC for light gaming and streaming.",
+    metaKeywords: "mini pc, intel arc",
+  },
+  {
+    name: "Ryzen 5 5600X",
+    description: "AMD Ryzen 5 desktop CPU",
+    price: 95000,
+    category: "PC Parts",
+    subcategory: "CPU",
+    isPart: true,
+    partType: "CPU",
+    image: "/images/parts/ryzen5600x.jpg",
+    countInStock: 12,
+  },
+  {
+    name: "GeForce RTX 4060",
+    description: "NVIDIA RTX 4060 8GB",
+    price: 220000,
+    category: "PC Parts",
+    subcategory: "GPU",
+    isPart: true,
+    partType: "GPU",
+    image: "/images/parts/rtx4060.jpg",
+    countInStock: 6,
+  },
+  {
+    name: "8GB DDR4 RAM Stick",
+    description: "8GB DDR4 3200MHz memory module",
+    price: 18000,
+    category: "PC Parts",
+    subcategory: "RAM",
+    isPart: true,
+    partType: "RAM",
+    image: "/images/parts/ddr4-8gb.jpg",
+    countInStock: 40,
+  },
+  {
+    name: "Custom PC Example",
+    description: "Sample assembled custom PC (seed)",
+    price: 350000,
+    category: "Custom PC",
+    isPart: false,
+    components: [
+      { slot: "CPU", name: "Ryzen 5 5600X", price: 95000 },
+      { slot: "GPU", name: "GeForce RTX 4060", price: 220000 },
+      { slot: "RAM", name: "8GB DDR4 RAM Stick", price: 15000 },
+    ],
+    image: "/images/custom/sample-build.jpg",
+    countInStock: 1,
+  },
 ];
 
 module.exports = products;

@@ -3,7 +3,7 @@ import { FaFilter } from "react-icons/fa";
 import FilterSidebar from "../components/Products/FilterSidebar";
 import SortOptions from "../components/Products/SortOptions";
 import ProductGrid from "../components/Products/ProductGrid";
-import { useParams, useSearchParams, useLocation } from "react-router-dom";
+import { useParams, useSearchParams, useLocation, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchProductsByFilters } from "../redux/slices/productsSlice";
 
@@ -54,6 +54,9 @@ const CollectionPage = () => {
     };
   }, []);
 
+  // add new category links / options
+  const categories = ["All", "Laptops", "Desktops", "PC Parts", "Custom PC"];
+
   return (
     <div className="flex flex-col lg:flex-row">
       {/*Sidebar for filters*/}
@@ -78,6 +81,20 @@ const CollectionPage = () => {
         <h2 className="text-2xl uppercase mb-4">
           {collection || "All Collection"}
         </h2>
+
+        {/* Category links */}
+        <div className="mb-4 flex gap-2 flex-wrap">
+          {categories.map((c) => (
+            <Link
+              key={c}
+              to={`/collections/all?category=${encodeURIComponent(c)}`}
+              className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm"
+            >
+              {c}
+            </Link>
+          ))}
+        </div>
+
         <SortOptions />
         <ProductGrid products={products} loading={loading} error={error} />
       </div>

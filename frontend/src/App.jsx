@@ -23,6 +23,8 @@ import store from "./redux/store";
 import ProtectedRoute from "./components/Common/ProtectedRoute";
 import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
+import Build from "./pages/Build";
+import CheckoutPay from "./pages/CheckoutPay";
 
 const App = () => {
   return (
@@ -47,6 +49,8 @@ const App = () => {
             <Route path="contact" element={<Contact />} />
             <Route path="faq" element={<FAQ />} />
             <Route path="about" element={<Contact />} /> {/* simple alias for About; replace with real page if available */}
+            <Route path="build" element={<Build />} />
+            <Route path="/checkout/:id/pay" element={<CheckoutPay />} />
           </Route>
           {/*Admin Layout */}
           <Route path="/admin" element={<AdminLayout />}>

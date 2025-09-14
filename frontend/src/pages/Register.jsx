@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import register from "../assets/register.jpg";
 import { registerUser } from "../redux/slices/authSlice";
 import { mergeCart } from "../redux/slices/cartSlice"; 
+import { setCart } from "../redux/slices/cartSlice";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function Register() {
@@ -24,15 +25,18 @@ export default function Register() {
 
   useEffect(() => {
     if (user) {
-      if (cart?.products.length > 0 && guestId) {
-        dispatch(mergeCart({ guestId, userId: user._id })).then(() => {
-          navigate(isCheckoutRedirect ? "/checkout" : "/");
-        });
-      } else {
-        navigate(isCheckoutRedirect ? "/checkout" : "/");
+      // persist local cart into Redux store before navigation/merge
+      try {
+        const local = JSON.parse(localStorage.getItem("cart") || "[]");
+        if (Array.isArray(local) && local.length) {
+          dispatch(setCart(local));
+        }
+      } catch (e) {
+        console.warn("Register: failed to parse local cart", e);
       }
+      navigate(isCheckoutRedirect ? "/checkout" : "/");
     }
-  }, [user, guestId, cart, isCheckoutRedirect, dispatch, navigate]);
+  }, [user, isCheckoutRedirect, dispatch, navigate]);
 
   const handleRegister = (e) => {
     e.preventDefault();

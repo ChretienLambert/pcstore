@@ -1,179 +1,79 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
-
-// Helper: storage
-const loadCartFromStorage = () => {
-  const storedCart = localStorage.getItem("cart");
-  return storedCart ? JSON.parse(storedCart) : { products: [] };
-};
-const saveCartToStorage = (cart) => {
-  try {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  } catch (e) {}
+const initialState = {
+  cartItems: JSON.parse(localStorage.getItem("cart") || "[]"),
+  loading: false,
+  error: null,
 };
 
-// normalize id from many shapes
-const normalizeProductId = (productOrId) => {
-  if (!productOrId) return null;
-  if (typeof productOrId === "string") return productOrId;
-  return productOrId._id || productOrId.id || productOrId.productId || null;
-};
-
-// Merge backend response into state.cart (handles multiple payload shapes)
-const applyCartResponse = (state, payload) => {
-  if (!payload) return;
-
-  // full cart object: { products: [...] }
-  if (payload.products && Array.isArray(payload.products)) {
-    state.cart = payload;
-    saveCartToStorage(state.cart);
-    return;
-  }
-
-  // payload is array of products
-  if (Array.isArray(payload)) {
-    state.cart = { products: payload };
-    saveCartToStorage(state.cart);
-    return;
-  }
-
-  // payload indicates deletion (contains productId but no products)
-  if (payload.productId && !payload.products && !payload.quantity) {
-    const pid = normalizeProductId(payload.productId);
-    if (pid && state.cart && Array.isArray(state.cart.products)) {
-      state.cart.products = state.cart.products.filter((p) => {
-        const existingPid = normalizeProductId(p.product || p);
-        const sameSize = (p.size || p.sizes || "") === (payload.size || "");
-        const sameColor = (p.color || "") === (payload.color || "");
-        return !(existingPid === pid && sameSize && sameColor);
-      });
-      saveCartToStorage(state.cart);
-    }
-    return;
-  }
-
-  // Single item (add/update) -> merge into existing products
-  const incoming = payload;
-  const incomingPid = normalizeProductId(incoming.product || incoming.productId || incoming);
-  if (!incomingPid) return;
-
-  const products = state.cart?.products ? [...state.cart.products] : [];
-
-  const matches = (a, b) => {
-    const aPid = normalizeProductId(a.product || a.productId || a);
-    const bPid = normalizeProductId(b.product || b.productId || b);
-    const aSize = a.size || a.sizes || "";
-    const bSize = b.size || b.sizes || "";
-    const aColor = a.color || "";
-    const bColor = b.color || "";
-    return aPid === bPid && aSize === bSize && aColor === bColor;
-  };
-
-  let merged = false;
-  for (let i = 0; i < products.length; i++) {
-    if (matches(products[i], incoming)) {
-      const existingQty = Number(products[i].quantity) || 0;
-      const incomingQty = Number(incoming.quantity);
-      if (Number.isFinite(incomingQty)) {
-        // default: treat incoming as increment (add)
-        if (incoming.replaceQuantity) {
-          products[i].quantity = incomingQty;
-        } else {
-          products[i].quantity = existingQty + incomingQty;
-        }
-      }
-      // merge other fields
-      products[i] = { ...products[i], ...(incoming.product || incoming) };
-      merged = true;
-      break;
-    }
-  }
-
-  if (!merged) {
-    const toPush = { ...(incoming.product || incoming) };
-    toPush.quantity = Number(incoming.quantity) || Number(toPush.quantity) || 1;
-    products.push(toPush);
-  }
-
-  state.cart = { products };
-  saveCartToStorage(state.cart);
-};
-
-// thunks (keep same names so UI dispatches work)
-export const fetchCart = createAsyncThunk(
-  "cart/fetchCart",
-  async ({ userId, guestId }, { rejectWithValue }) => {
-    try {
-      const res = await axios.get(`${BACKEND}/api/cart`, {
-        params: { userId, guestId },
-        headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
-      });
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
-    }
-  }
-);
-
+// If called with a payload that has isCustomBuild true - push directly
 export const addToCart = createAsyncThunk(
   "cart/addToCart",
-  async ({ productId, quantity, size, color, guestId, userId }, { rejectWithValue }) => {
-    try {
-      const res = await axios.post(
-        `${BACKEND}/api/cart`,
-        { productId, quantity, size, color, guestId, userId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` } }
-      );
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+  async (payload, { getState }) => {
+    if (payload && payload.isCustomBuild) {
+      return payload;
     }
+    const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
+    const res = await axios.get(`${BACKEND}/api/products/${payload.productId}`);
+    const p = res.data;
+    return {
+      productId: p._id,
+      name: p.name,
+      image: p.image,
+      price: p.price,
+      quantity: payload.quantity || 1,
+    };
   }
 );
 
+// NEW: update cart item quantity (will update remote cart when userId present, otherwise localStorage)
 export const updateCartItemQuantity = createAsyncThunk(
   "cart/updateCartItemQuantity",
-  async ({ productId, quantity, size, color, guestId, userId }, { rejectWithValue }) => {
+  async (
+    { productId, quantity, size, color, guestId, userId },
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await axios.put(
-        `${BACKEND}/api/cart`,
-        { productId, quantity, size, color, guestId, userId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` } }
+      const BACKEND =
+        import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
+      // If userId present or token present, attempt backend update
+      if (userId || localStorage.getItem("userToken")) {
+        const payload = { productId, quantity, size, color, guestId, userId };
+        const res = await axios.put(`${BACKEND}/api/cart`, payload, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
+        });
+        // expect cart object returned (backend cart schema may differ); normalize to array
+        const updatedCart =
+          res.data?.products || res.data?.items || res.data || [];
+        // persist (safe)
+        try {
+          localStorage.setItem("cart", JSON.stringify(updatedCart));
+        } catch {}
+        return updatedCart;
+      }
+      // Fallback: update localStorage cart array
+      const raw = localStorage.getItem("cart");
+      const list = raw ? JSON.parse(raw) : [];
+      const idx = list.findIndex(
+        (i) =>
+          String(i.productId || i._id || i.product) === String(productId) &&
+          (i.size || "") === (size || "") &&
+          (i.color || "") === (color || "")
       );
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
-    }
-  }
-);
-
-export const removeFromCart = createAsyncThunk(
-  "cart/removeFromCart",
-  async ({ productId, size, color, guestId, userId }, { rejectWithValue }) => {
-    try {
-      const res = await axios({
-        method: "DELETE",
-        url: `${BACKEND}/api/cart`,
-        data: { productId, guestId, userId, size, color },
-        headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
-      });
-      return res.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
-    }
-  }
-);
-
-export const mergeCart = createAsyncThunk(
-  "cart/mergeCart",
-  async ({ guestId, userId }, { rejectWithValue }) => {
-    try {
-      const res = await axios.post(`${BACKEND}/api/cart/merge`, { guestId, userId }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("userToken")}` },
-      });
-      return res.data;
+      if (idx > -1) {
+        if (quantity <= 0) {
+          list.splice(idx, 1);
+        } else {
+          list[idx].quantity = quantity;
+        }
+      } else if (quantity > 0) {
+        list.push({ productId, quantity, size, color, price: 0, name: "Item" });
+      }
+      localStorage.setItem("cart", JSON.stringify(list));
+      return list;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
@@ -182,88 +82,125 @@ export const mergeCart = createAsyncThunk(
 
 const cartSlice = createSlice({
   name: "cart",
-  initialState: {
-    cart: loadCartFromStorage(),
-    loading: false,
-    error: null,
-  },
+  initialState,
   reducers: {
-    clearCart: (state) => {
-      state.cart = { products: [] };
+    // keep synchronous reducer for simple removals (string id)
+    removeFromCart(state, action) {
+      state.cartItems = state.cartItems.filter(
+        (i) => i.productId !== action.payload
+      );
+      localStorage.setItem("cart", JSON.stringify(state.cartItems));
+    },
+    clearCart(state) {
+      state.cartItems = [];
       localStorage.removeItem("cart");
+    },
+    setCart(state, action) {
+      state.cartItems = action.payload;
+      localStorage.setItem("cart", JSON.stringify(state.cartItems));
+    },
+    // Merge an incoming cart (e.g. guest cart after login) into current cart
+    mergeCart(state, action) {
+      const incoming = Array.isArray(action.payload) ? action.payload : [];
+      incoming.forEach((inc) => {
+        // try to match by productId (or product/_id)
+        const pid = inc.productId || inc.product || inc._id || inc.name;
+        const exist = state.cartItems.find(
+          (i) =>
+            String(i.productId || i.product || i._id || i.name) === String(pid)
+        );
+        if (exist) {
+          // increase quantity for non-custom builds, otherwise create new entry
+          if (!inc.isCustomBuild) {
+            exist.quantity = (exist.quantity || 0) + (inc.quantity || 1);
+          } else {
+            // for custom builds, always add as distinct item
+            state.cartItems.push({ ...inc, productId: pid });
+          }
+        } else {
+          state.cartItems.push({ ...inc, productId: pid });
+        }
+      });
+      try {
+        localStorage.setItem("cart", JSON.stringify(state.cartItems));
+      } catch (e) {}
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchCart.fulfilled, (state, action) => {
-        state.loading = false;
-        applyCartResponse(state, action.payload);
-      })
-      .addCase(fetchCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload?.message || "Failed to fetch cart";
-      })
       .addCase(addToCart.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(addToCart.fulfilled, (state, action) => {
         state.loading = false;
-        applyCartResponse(state, action.payload);
+        const item = action.payload;
+        if (!item.isCustomBuild) {
+          const exist = state.cartItems.find(
+            (i) => i.productId === item.productId
+          );
+          if (exist) {
+            exist.quantity = (exist.quantity || 0) + (item.quantity || 1);
+          } else {
+            state.cartItems.push({
+              productId: item.productId,
+              name: item.name,
+              image: item.image,
+              price: item.price,
+              quantity: item.quantity || 1,
+            });
+          }
+        } else {
+          const buildId = item.productId || `custom_build_${Date.now()}`;
+          state.cartItems.push({
+            productId: buildId,
+            name: item.name,
+            image: item.image,
+            price: item.price,
+            quantity: item.quantity || 1,
+            isCustomBuild: true,
+            components: item.components || [],
+            notes: item.notes || "",
+          });
+        }
+        localStorage.setItem("cart", JSON.stringify(state.cartItems));
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload?.message || "Failed to add to cart";
+        state.error = action.error?.message || "Add to cart failed";
       })
+
+      // handle updateCartItemQuantity lifecycle
       .addCase(updateCartItemQuantity.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(updateCartItemQuantity.fulfilled, (state, action) => {
         state.loading = false;
-        applyCartResponse(state, action.payload);
+        // action.payload is the updated cart array
+        state.cartItems = Array.isArray(action.payload)
+          ? action.payload
+          : state.cartItems;
+        try {
+          localStorage.setItem("cart", JSON.stringify(state.cartItems));
+        } catch {}
       })
       .addCase(updateCartItemQuantity.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload?.message || "Failed to update item quantity";
-      })
-      .addCase(removeFromCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(removeFromCart.fulfilled, (state, action) => {
-        state.loading = false;
-        applyCartResponse(state, action.payload);
-      })
-      .addCase(removeFromCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload?.message || "Failed to remove item from cart";
-      })
-      .addCase(mergeCart.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(mergeCart.fulfilled, (state, action) => {
-        state.loading = false;
-        applyCartResponse(state, action.payload);
-      })
-      .addCase(mergeCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload?.message || "Failed to merge cart";
+        state.error =
+          action.payload?.message ||
+          action.error?.message ||
+          "Update cart failed";
       });
   },
 });
 
-export const { clearCart } = cartSlice.actions;
+export const { removeFromCart, clearCart, setCart, mergeCart } =
+  cartSlice.actions;
 export default cartSlice.reducer;
 
-const buildAuthHeaders = () => {
+// helper exported for direct use
+export const buildAuthHeaders = () => {
   const token = localStorage.getItem("userToken");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
-
-// then use: axios.get(url, { params, headers: buildAuthHeaders() })

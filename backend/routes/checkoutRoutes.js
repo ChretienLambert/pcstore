@@ -1,11 +1,20 @@
 const express = require("express");
+const router = express.Router();
+const jwt = require("jsonwebtoken");
 const Checkout = require("../models/Checkout");
-const Cart = require("../models/Cart");
-const Product = require("../models/Product");
 const Order = require("../models/Order");
+const User = require("../models/User");
+const Cart = require("../models/Cart");
+const mongoose = require("mongoose");
 const { protect } = require("../middleware/authMiddleware");
 
-const router = express.Router();
+// friendly fallback image
+const DEFAULT_IMAGE =
+  process.env.DEFAULT_PRODUCT_IMAGE ||
+  "https://placehold.co/400x300?text=No+Image";
+
+const isValidObjectId = (id) =>
+  !!id && mongoose.Types.ObjectId.isValid(String(id));
 
 //@route POST /api/checkout
 //@desc Create a new checkout session
@@ -27,18 +36,33 @@ router.post("/", protect, async (req, res) => {
     return res.status(400).json({ message: "No items in checkout" });
   }
 
-  // ensure items have required fields and numeric values
+  // Defensive normalization: ensure each item has required fields and remove invalid product ids
+  checkoutItems = checkoutItems.map((it) => {
+    const item = { ...(it || {}) };
+    // Cast numeric fields
+    item.price = Number(item.price || 0);
+    item.quantity = Number(item.quantity || 1);
+    // image required by schema - provide fallback
+    item.image = item.image || DEFAULT_IMAGE;
+    // Only keep productId if it's a valid ObjectId
+    if (item.productId && !isValidObjectId(item.productId)) {
+      delete item.productId;
+    }
+    // allow custom builds that omit productId
+    return item;
+  });
+
+  // validate items after normalization
   for (const it of checkoutItems) {
     if (
-      !it.productId ||
       !it.name ||
       typeof it.price === "undefined" ||
       typeof it.quantity === "undefined"
     ) {
-      return res.status(400).json({ message: "Invalid checkout item" });
+      return res
+        .status(400)
+        .json({ message: "Invalid checkout item", item: it });
     }
-    it.price = Number(it.price);
-    it.quantity = Number(it.quantity);
     if (
       Number.isNaN(it.price) ||
       Number.isNaN(it.quantity) ||
@@ -46,7 +70,7 @@ router.post("/", protect, async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ message: "Invalid item quantity or price" });
+        .json({ message: "Invalid price/quantity", item: it });
     }
   }
 
@@ -90,32 +114,86 @@ router.post("/", protect, async (req, res) => {
   }
 });
 
-//@route PUT /api/checkout/:id/pay
-//@desc Update checkout to mark as paid after successful payment
-//@access Private
-router.put("/:id/pay", protect, async (req, res) => {
-  const { paymentStatus, paymentDetails } = req.body;
+// New: mark checkout as paid / create order from checkout
+router.put("/:id/pay", async (req, res) => {
   try {
     const checkout = await Checkout.findById(req.params.id);
     if (!checkout)
       return res.status(404).json({ message: "Checkout not found" });
 
-    // ensure the acting user owns the checkout or is admin
-    if (String(checkout.user) !== String(req.user._id)) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to pay this checkout" });
+    // idempotent: if order exists return it
+    const existing = await Order.findOne({ checkout: checkout._id });
+    if (existing) return res.json(existing);
+
+    // optional user resolution from token
+    let user = null;
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.split(" ")[1] : null;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        user = await User.findById(decoded.id).lean();
+      } catch (e) {
+        user = null;
+      }
     }
 
-    checkout.paymentStatus = paymentStatus || "paid";
-    checkout.paymentDetails = paymentDetails || {};
-    checkout.paidAt = new Date();
+    // build orderItems with defensive normalization
+    const orderItems = (checkout.checkoutItems || []).map((it) => {
+      const item = {
+        name: it.name,
+        quantity: Number(it.quantity || 1),
+        price: Number(it.price || 0),
+        isCustomBuild: Boolean(it.isCustomBuild),
+        components: Array.isArray(it.components) ? it.components : [],
+        image: it.image || DEFAULT_IMAGE,
+      };
+      if (it.productId && isValidObjectId(it.productId)) {
+        item.product = it.productId;
+      }
+      return item;
+    });
+
+    if (!orderItems.length)
+      return res.status(400).json({ message: "No order items" });
+
+    const order = new Order({
+      user: user ? user._id : null,
+      checkout: checkout._id,
+      orderItems,
+      shippingAddress: checkout.shippingAddress || {},
+      paymentMethod: checkout.paymentMethod || "cod",
+      itemsPrice: checkout.itemsPrice || checkout.totalPrice || 0,
+      shippingPrice: checkout.shippingPrice || 0,
+      taxPrice: checkout.taxPrice || 0,
+      totalPrice: checkout.totalPrice || checkout.itemsPrice || 0,
+    });
+
+    order.ownerName = user
+      ? user.name || user.email
+      : checkout.shippingAddress?.name || "Guest";
+
+    if ((checkout.paymentMethod || "cod") === "card") {
+      order.isPaid = true;
+      order.paidAt = new Date();
+      order.paymentStatus = "paid";
+    } else {
+      order.paymentStatus = "pending";
+    }
+
+    await order.save();
+
+    checkout.order = order._id;
+    checkout.isPaid = order.isPaid;
+    checkout.paidAt = order.paidAt || null;
     await checkout.save();
 
-    return res.json(checkout);
-  } catch (error) {
-    console.error("PUT pay error:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(201).json(order);
+  } catch (err) {
+    console.error("Checkout pay error:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error creating order from checkout" });
   }
 });
 

@@ -26,7 +26,7 @@ export const fetchAllOrders = createAsyncThunk(
   }
 );
 
-// update order delivery status (accepts id and partial update object)
+// update order delivery/payment/status (admin)
 export const updateOrderStatus = createAsyncThunk(
   "adminOrders/updateOrderStatus",
   async ({ id, update }, { rejectWithValue }) => {
@@ -34,7 +34,7 @@ export const updateOrderStatus = createAsyncThunk(
       const headers = {};
       const bearer = getBearerToken();
       if (bearer) headers.Authorization = bearer;
-      // send update object directly so backend receives fields like { isDelivered, paymentStatus, isPaid }
+      // Call the admin route for updates
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/api/admin/orders/${id}`,
         update,
@@ -84,26 +84,64 @@ const adminOrderSlice = createSlice({
       })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload;
-        state.totalOrders = action.payload.length;
-        const totalSales = action.payload.reduce(
-          (acc, order) => acc + (order.totalPrice || 0),
+        // Normalize payload to an array
+        const list = Array.isArray(action.payload)
+          ? action.payload
+          : Array.isArray(action.payload?.orders)
+          ? action.payload.orders
+          : [];
+
+        // Deduplicate by _id (safe if backend or client accidentally returns duplicates)
+        const map = new Map();
+        list.forEach((o) => {
+          if (!o || !o._id) return;
+          map.set(String(o._id), o);
+        });
+        state.orders = Array.from(map.values());
+        state.totalOrders = state.orders.length;
+        state.totalSales = state.orders.reduce(
+          (acc, order) => acc + Number(order.totalPrice || 0),
           0
         );
-        state.totalSales = totalSales;
       })
       .addCase(fetchAllOrders.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message || action.error?.message;
       })
+
+      // When an order is updated, replace the single entry and keep list deduped
       .addCase(updateOrderStatus.fulfilled, (state, action) => {
-        const updatedOrder = action.payload;
-        const idx = state.orders.findIndex((o) => o._id === updatedOrder._id);
-        if (idx !== -1) state.orders[idx] = updatedOrder;
+        const updated = action.payload;
+        if (!updated || !updated._id) return;
+        const idx = state.orders.findIndex(
+          (o) => String(o._id) === String(updated._id)
+        );
+        if (idx !== -1) {
+          state.orders[idx] = updated;
+        } else {
+          // if not present insert at top
+          state.orders.unshift(updated);
+          // ensure uniqueness
+          const uniq = new Map();
+          state.orders.forEach((o) => uniq.set(String(o._id), o));
+          state.orders = Array.from(uniq.values());
+        }
+        // recalc totals
+        state.totalOrders = state.orders.length;
+        state.totalSales = state.orders.reduce(
+          (acc, order) => acc + Number(order.totalPrice || 0),
+          0
+        );
       })
+
       .addCase(deleteOrder.fulfilled, (state, action) => {
         state.orders = state.orders.filter(
-          (order) => order._id !== action.payload
+          (order) => String(order._id) !== String(action.payload)
+        );
+        state.totalOrders = state.orders.length;
+        state.totalSales = state.orders.reduce(
+          (acc, order) => acc + Number(order.totalPrice || 0),
+          0
         );
       });
   },

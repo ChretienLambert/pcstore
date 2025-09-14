@@ -4,20 +4,22 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 const CartDrawer = ({ drawerOpen, toggleCartDrawer }) => {
   const navigate = useNavigate();
-  const {user,guestId}=useSelector((state)=>state.auth)
-  const {cart}=useSelector((state)=>state.cart)
-  const userId=user?user._id:null
+  const { user, guestId } = useSelector((state) => state.auth);
+  // use cartItems from cart slice (single source of truth)
+  const cartItems = useSelector((state) => state.cart.cartItems || JSON.parse(localStorage.getItem("cart") || "[]"));
+  const userId = user ? user._id : null;
   const handleCheckout = () => {
-    toggleCartDrawer()
-    if (!user){
-      navigate("/login?redirect=checkout")
-    }else{
-    navigate("/checkout");
+    toggleCartDrawer();
+    if (!user) {
+      // use full path so Login can redirect reliably
+      navigate("/login?redirect=/checkout");
+    } else {
+      navigate("/checkout");
     }
   };
   return (
     <div
-      className={`fixed top-0 right-0 w-3/4 sm:w-1/2 md:w-[25rem] h-full bg-white shadow-lg transform transistion-transform duration-300 flex flex-col z-50 ${
+      className={`fixed top-0 right-0 w-3/4 sm:w-1/2 md:w-[25rem] h-full bg-white shadow-lg transform transition-transform duration-300 flex flex-col z-50 ${
         drawerOpen ? "translate-x-0" : "translate-x-full"
       }`}
     >
@@ -29,25 +31,22 @@ const CartDrawer = ({ drawerOpen, toggleCartDrawer }) => {
       {/*Cart content with scroll*/}
       <div className="flex-grow p-4 overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">Your Cart</h2>
-        {cart && cart?.products?.length>0?(<CartContents cart={cart} userId={userId} guestId={guestId} />
-        ):(
+        {cartItems && cartItems.length > 0 ? (
+          <CartContents cartItems={cartItems} userId={userId} guestId={guestId} />
+        ) : (
           <p>Your Cart is Empty</p>
-          )}
-        
+        )}
       </div>
       {/*Checkout button*/}
       <div className="p-4 bg-white sticky bottom-0">
-        {cart && cart?.products?.length>0&&(
+        {cartItems && cartItems.length > 0 && (
           <>
-          <button
-          onClick={handleCheckout}
-          className="btn-primary"
-        >
-          Checkout
-        </button>
-        <p className="text-sm tracking-tighter text-gray-500 mt-2 text-center">
-          Shipping calculated at checkout
-        </p>
+            <button onClick={handleCheckout} className="btn-primary">
+              Checkout
+            </button>
+            <p className="text-sm tracking-tighter text-gray-500 mt-2 text-center">
+              Shipping calculated at checkout
+            </p>
           </>
         )}
       </div>

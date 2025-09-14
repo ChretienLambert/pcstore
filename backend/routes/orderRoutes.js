@@ -1,7 +1,18 @@
 const express = require("express");
-const Order = require("../models/Order");
-const { protect } = require("../middleware/authMiddleware");
 const router = express.Router();
+const Order = require("../models/Order");
+const Checkout = require("../models/Checkout");
+const { protect, admin } = require("../middleware/authMiddleware");
+const mongoose = require("mongoose");
+const Cart = require("../models/Cart");
+
+// replace the fallback host that was failing DNS with a reliable placeholder
+const DEFAULT_IMAGE =
+  process.env.DEFAULT_PRODUCT_IMAGE ||
+  "https://placehold.co/400x300?text=No+Image";
+
+const isValidObjectId = (id) =>
+  !!id && mongoose.Types.ObjectId.isValid(String(id));
 
 //@route GET api/order/my-orders
 //@desc Get logged-in user's orders
@@ -19,7 +30,85 @@ router.get("/my-orders", protect, async (req, res) => {
   }
 });
 
-// GET /api/orders/:id - return single order (owner or admin)
+// POST create order
+router.post("/", protect, async (req, res) => {
+  try {
+    const {
+      orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      totalPrice,
+      idempotencyKey,
+    } = req.body;
+
+    // Defensive normalization: ensure orderItems is array and every item has required fields
+    const items = Array.isArray(orderItems) ? orderItems : [];
+    const normalized = items
+      .map((it) => {
+        if (!it) return null;
+        const n = { ...it };
+        // ensure image exists (backend fallback)
+        n.image = n.image || DEFAULT_IMAGE;
+        n.name =
+          n.name || (n.productId ? String(n.productId) : "Unknown Product");
+        n.quantity = Number(n.quantity || 1);
+        n.price = Number(n.price || 0);
+        // ensure we only set product if it's a valid ObjectId
+        if (n.product && !isValidObjectId(n.product)) delete n.product;
+        if (n.productId && !isValidObjectId(n.productId)) delete n.productId;
+        return n;
+      })
+      .filter(Boolean);
+
+    // helpful debug log of final payload (remove or lower log level in production)
+    console.log("Create order payload:", {
+      user: req.user ? req.user._id : null,
+      itemsCount: normalized.length,
+      idempotencyKey,
+      itemsPreview: normalized.slice(0, 5).map((i) => ({
+        name: i.name,
+        image: i.image,
+        qty: i.quantity,
+        price: i.price,
+      })),
+    });
+
+    if (!normalized.length) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    const order = new Order({
+      user: req.user._id,
+      orderItems: normalized,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      taxPrice,
+      totalPrice,
+      idempotencyKey,
+    });
+
+    const createdOrder = await order.save();
+
+    // Clear server-side cart records for this user (best-effort)
+    try {
+      await Cart.deleteMany({ user: req.user._id }).catch(() => {});
+    } catch (e) {
+      console.error("Failed to clear user cart after order:", e);
+    }
+
+    res.status(201).json(createdOrder);
+  } catch (error) {
+    console.error("Create order error:", error);
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+});
+
+// GET single order (populated)
 router.get("/:id", protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -27,60 +116,44 @@ router.get("/:id", protect, async (req, res) => {
       .lean();
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const userId = String(req.user._id);
-    if (
-      String(order.user?._id || order.user) !== userId &&
-      req.user.role !== "admin"
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to view this order" });
+    // determine order owner id (order.user may be null)
+    const orderUserId = order.user
+      ? String(order.user._id || order.user)
+      : null;
+    const requesterId = req.user ? String(req.user._id) : null;
+
+    // only owner or admin can view order
+    if (orderUserId !== requesterId && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     return res.json(order);
   } catch (err) {
-    console.error("GET /api/orders/:id error:", err);
+    console.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-//@route POST /api/orders
-//@desc Create new order
-//@access Private
-router.post("/", protect, async (req, res) => {
+// Admin: update order status (confirm payment for COD etc.)
+router.put("/:id/status", protect, admin, async (req, res) => {
   try {
-    const { orderItems, shippingAddress, paymentMethod } = req.body;
-    if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
-      return res.status(400).json({ message: "No order items provided" });
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    order.status = status || order.status;
+
+    // if admin marks as 'paid' confirm payment fields
+    if (status === "paid") {
+      order.isPaid = true;
+      order.paidAt = new Date();
     }
-    // compute totals defensively
-    const itemsPrice = orderItems.reduce(
-      (sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 1),
-      0
-    );
-    const taxPrice = Number(req.body.taxPrice || 0);
-    const shippingPrice = Number(req.body.shippingPrice || 0);
-    const totalPrice = Number(
-      req.body.totalPrice ?? itemsPrice + taxPrice + shippingPrice
-    );
 
-    const order = new Order({
-      user: req.user._id,
-      orderItems,
-      shippingAddress,
-      paymentMethod,
-      itemsPrice,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
-      paymentStatus: "pending",
-    });
-
-    const created = await order.save();
-    return res.status(201).json(created);
-  } catch (error) {
-    console.error("Create order error:", error);
-    return res.status(500).json({ message: "Server Error" });
+    await order.save();
+    return res.json(order);
+  } catch (err) {
+    console.error("Update order status error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
