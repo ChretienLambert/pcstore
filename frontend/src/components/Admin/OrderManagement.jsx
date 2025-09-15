@@ -15,6 +15,11 @@ const OrderManagement = () => {
     dispatch(fetchAllOrders());
   }, [dispatch]);
 
+  // Calculate total quantity of items in an order
+  const getTotalQuantity = (order) => {
+    return order.orderItems?.reduce((total, item) => total + (item.quantity || 1), 0) || 0;
+  };
+
   // accept the id (string) — ensure callers pass order._id
   const viewOrder = (orderId) => {
     if (!orderId) return;
@@ -31,6 +36,32 @@ const OrderManagement = () => {
     }
   };
 
+  // Determine payment status based on payment method and isPaid
+  const getPaymentStatus = (order) => {
+    if (order.isPaid) {
+      return "Paid";
+    } else if (order.paymentMethod === "card") {
+      return "Pending"; // Card payment but not yet paid
+    } else if (order.paymentMethod === "cash") {
+      return "Unpaid"; // Cash on delivery - will pay later
+    }
+    return "Pending"; // Default fallback
+  };
+
+  // Get appropriate styling for payment status
+  const getPaymentStatusStyle = (status) => {
+    switch (status) {
+      case "Paid":
+        return "bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs";
+      case "Unpaid":
+        return "bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs";
+      case "Pending":
+        return "bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs";
+      default:
+        return "bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs";
+    }
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="text-red-600">Error: {String(error)}</p>;
 
@@ -43,37 +74,47 @@ const OrderManagement = () => {
             <tr className="text-sm text-gray-600">
               <th className="p-3">Order</th>
               <th className="p-3">Customer</th>
-              <th className="p-3">Items</th>
+              <th className="p-3">Items (Qty)</th>
               <th className="p-3">Total</th>
-              <th className="p-3">Payment</th>
-              <th className="p-3">Delivered</th>
+              <th className="p-3">Payment Method</th>
+              <th className="p-3">Payment Status</th>
+              
               <th className="p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
-              <tr key={order._id} className="border-b hover:bg-gray-50">
-                <td className="p-3">
-                  <button onClick={() => viewOrder(order._id)} className="text-left text-blue-700 hover:underline">
-                    #{String(order._id).slice(0, 8)}
-                  </button>
-                </td>
-                <td className="p-3">{order.user?.name || order.user?.email || "Guest"}</td>
-                <td className="p-3">{order.orderItems?.length || 0}</td>
-                <td className="p-3">FCFA {Number(order.totalPrice || 0).toLocaleString()}</td>
-                <td className="p-3">{order.isPaid ? "Paid" : "Pending"}</td>
-                <td className="p-3">{order.isDelivered ? "Yes" : "No"}</td>
-                <td className="p-3">
-                  <div className="flex gap-2">
-                    <button onClick={() => viewOrder(order._id)} className="bg-blue-600 text-white px-2 py-1 rounded">View</button>
-                    <button onClick={() => handleDelete(order._id)} className="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {orders.map((order) => {
+              const paymentStatus = getPaymentStatus(order);
+              const totalQuantity = getTotalQuantity(order);
+              return (
+                <tr key={order._id} className="border-b hover:bg-gray-50">
+                  <td className="p-3">
+                    <button onClick={() => viewOrder(order._id)} className="text-left text-blue-700 hover:underline">
+                      #{String(order._id).slice(0, 8)}
+                    </button>
+                  </td>
+                  <td className="p-3">{order.user?.name || order.user?.email || "Guest"}</td>
+                  <td className="p-3">{totalQuantity}</td>
+                  <td className="p-3">FCFA {Number(order.totalPrice || 0).toLocaleString()}</td>
+                  <td className="p-3 capitalize">{order.paymentMethod || "Unknown"}</td>
+                  <td className="p-3">
+                    <span className={getPaymentStatusStyle(paymentStatus)}>
+                      {paymentStatus}
+                    </span>
+                  </td>
+                  
+                  <td className="p-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => viewOrder(order._id)} className="bg-blue-600 text-white px-2 py-1 rounded">View</button>
+                      <button onClick={() => handleDelete(order._id)} className="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {!loading && orders.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-4 text-center text-gray-500">No orders found</td>
+                <td colSpan={8} className="p-4 text-center text-gray-500">No orders found</td>
               </tr>
             )}
           </tbody>

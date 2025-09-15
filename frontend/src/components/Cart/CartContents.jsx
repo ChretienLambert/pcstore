@@ -5,12 +5,26 @@ import { updateCartItemQuantity, removeFromCart } from "../../redux/slices/cartS
 
 const CartContents = ({ userId, guestId, cartItems: propCartItems }) => {
   const dispatch = useDispatch();
-  // prefer propCartItems (passed from drawer) otherwise fall back to store/localStorage
   const inferred = useSelector((s) => s.cart?.cartItems || JSON.parse(localStorage.getItem("cart") || "[]"));
   const cartItems = Array.isArray(propCartItems) ? propCartItems : inferred;
+  
+  // Get current user info from Redux store if available
+  const currentUser = useSelector((state) => state.auth?.user || null);
+  const effectiveUserId = userId || currentUser?._id || null;
 
-  const handleChangeQty = (productId, newQty, size, color) => {
-    dispatch(updateCartItemQuantity({ productId, quantity: newQty, size, color, guestId, userId }));
+  const handleChangeQty = (product, newQty) => {
+    dispatch(updateCartItemQuantity({ 
+      productId: product.productId || product._id || product.product, 
+      quantity: newQty, 
+      size: product.size || "", 
+      color: product.color || "", 
+      guestId, 
+      userId: effectiveUserId 
+    }));
+  };
+
+  const handleRemove = (product) => {
+    dispatch(removeFromCart(product.productId || product._id || product.product));
   };
 
   return (
@@ -24,6 +38,8 @@ const CartContents = ({ userId, guestId, cartItems: propCartItems }) => {
                 <div>
                   <div className="font-medium">{product.name}</div>
                   <div className="text-sm text-gray-500">Unit: FCFA {Number(product.price || 0).toLocaleString()}</div>
+                  {product.size && <div className="text-sm text-gray-500">Size: {product.size}</div>}
+                  {product.color && <div className="text-sm text-gray-500">Color: {product.color}</div>}
                   {product.isCustomBuild && (
                     <div className="mt-2 text-sm">
                       <div className="font-semibold">Build components:</div>
@@ -43,10 +59,23 @@ const CartContents = ({ userId, guestId, cartItems: propCartItems }) => {
               <div className="text-right">
                 <div className="font-medium mb-2">FCFA {(Number(product.price || 0) * Number(product.quantity || 1)).toLocaleString()}</div>
                 <div className="flex items-center justify-end gap-2">
-                  <button onClick={() => handleChangeQty(product.productId || product._id || product.product, Math.max(0, (product.quantity || 1) - 1))} className="px-2 py-1 border rounded">-</button>
-                  <div>{product.quantity}</div>
-                  <button onClick={() => handleChangeQty(product.productId || product._id || product.product, (product.quantity || 1) + 1)} className="px-2 py-1 border rounded">+</button>
-                  <button onClick={() => dispatch(removeFromCart(product.productId || product._id || product.product))} className="ml-3">
+                  <button 
+                    onClick={() => handleChangeQty(product, Math.max(0, (product.quantity || 1) - 1))} 
+                    className="px-2 py-1 border rounded hover:bg-gray-100 transition-colors"
+                  >
+                    -
+                  </button>
+                  <div className="min-w-[20px] text-center">{product.quantity}</div>
+                  <button 
+                    onClick={() => handleChangeQty(product, (product.quantity || 1) + 1)} 
+                    className="px-2 py-1 border rounded hover:bg-gray-100 transition-colors"
+                  >
+                    +
+                  </button>
+                  <button 
+                    onClick={() => handleRemove(product)} 
+                    className="ml-3 hover:bg-gray-100 p-1 rounded transition-colors"
+                  >
                     <RiDeleteBin3Line className="h-5 w-5 text-red-500" />
                   </button>
                 </div>

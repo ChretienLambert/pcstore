@@ -1,26 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  fetchSingleProduct,
-  updateProduct,
-} from "../../redux/slices/productsSlice";
+import { createProduct } from "../../redux/slices/adminProductSlice";
 
-const EditProductPage = () => {
+const CreateProduct = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const { selectedProduct, loading, error } = useSelector(
-    (state) => state.products
-  );
+  const { loading, error } = useSelector((state) => state.adminProducts);
 
   const [productData, setProductData] = useState({
-    name: "",
-    description: "",
+    name: "New Product",
+    description: "Describe your product",
     price: 0,
     countInStock: 0,
-    sku: "",
+    sku: `SKU-${Date.now()}`,
     category: "",
     brand: "",
     sizes: [],
@@ -28,57 +22,12 @@ const EditProductPage = () => {
     collections: "",
     material: "",
     images: [],
+    discountPrice: 0,
+    isActive: true
   });
 
-  const [isNewProduct, setIsNewProduct] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [updateError, setUpdateError] = useState("");
-
-  useEffect(() => {
-    if (id) {
-      // Check if this is a new product (ID might not exist in backend yet)
-      if (id.startsWith('TMP-') || id.includes('new')) {
-        setIsNewProduct(true);
-        // Set default values for new product
-        setProductData({
-          name: "New Product",
-          description: "Describe your product",
-          price: 0,
-          countInStock: 0,
-          sku: `TMP-${Date.now()}`,
-          category: "Uncategorized",
-          brand: "",
-          sizes: ["Standard"],
-          colors: ["Black"],
-          collections: "General",
-          material: "",
-          images: [],
-        });
-      } else {
-        setIsNewProduct(false);
-        dispatch(fetchSingleProduct(id));
-      }
-    }
-  }, [dispatch, id]);
-
-  useEffect(() => {
-    if (selectedProduct && !isNewProduct) {
-      setProductData({
-        name: selectedProduct.name || "",
-        description: selectedProduct.description || "",
-        price: selectedProduct.price || 0,
-        countInStock: selectedProduct.countInStock || 0,
-        sku: selectedProduct.sku || "",
-        category: selectedProduct.category || "",
-        brand: selectedProduct.brand || "",
-        sizes: selectedProduct.sizes || [],
-        colors: selectedProduct.colors || [],
-        collections: selectedProduct.collections || "",
-        material: selectedProduct.material || "",
-        images: selectedProduct.images || [],
-      });
-    }
-  }, [selectedProduct, isNewProduct]);
+  const [createError, setCreateError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -107,7 +56,7 @@ const EditProductPage = () => {
       }));
     } catch (error) {
       console.error("Image upload failed:", error);
-      setUpdateError("Image upload failed");
+      setCreateError("Image upload failed");
     } finally {
       setUploading(false);
     }
@@ -122,7 +71,7 @@ const EditProductPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setUpdateError("");
+    setCreateError("");
     
     try {
       // Convert string numbers to actual numbers
@@ -130,35 +79,31 @@ const EditProductPage = () => {
         ...productData,
         price: Number(productData.price),
         countInStock: Number(productData.countInStock),
+        discountPrice: Number(productData.discountPrice || 0),
         sizes: Array.isArray(productData.sizes) ? productData.sizes : [],
         colors: Array.isArray(productData.colors) ? productData.colors : [],
       };
 
-      const result = await dispatch(updateProduct({ id, productData: processedData })).unwrap();
+      const result = await dispatch(createProduct(processedData)).unwrap();
       
-      if (result) {
-        navigate("/admin/products");
+      if (result && result._id) {
+        navigate(`/admin/products/${result._id}/edit`);
       } else {
-        setUpdateError("Update failed. Please try again.");
+        setCreateError("Product creation failed. No product ID returned.");
       }
     } catch (err) {
-      console.error("Update error:", err);
-      setUpdateError(err.message || "Failed to update product");
+      console.error("Create error:", err);
+      setCreateError(err.message || "Failed to create product");
     }
   };
 
-  if (loading && !isNewProduct) return <p className="text-center p-6">Loading...</p>;
-  if (error) return <p className="text-red-600 p-6">Error: {error}</p>;
-
   return (
     <div className="max-w-5xl mx-auto p-6 shadow-md rounded-md bg-white">
-      <h2 className="text-3xl font-bold mb-6">
-        {isNewProduct ? "Create New Product" : "Edit Product"}
-      </h2>
+      <h2 className="text-3xl font-bold mb-6">Create New Product</h2>
       
-      {updateError && (
+      {createError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {updateError}
+          {createError}
         </div>
       )}
 
@@ -204,6 +149,20 @@ const EditProductPage = () => {
           />
         </div>
 
+        {/* Discount Price */}
+        <div className="mb-6">
+          <label className="block font-semibold mb-2">Discount Price (FCFA)</label>
+          <input
+            type="number"
+            name="discountPrice"
+            value={productData.discountPrice}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-md p-2"
+            min="0"
+            step="0.01"
+          />
+        </div>
+
         {/* Count in stock */}
         <div className="mb-6">
           <label className="block font-semibold mb-2">Count In Stock</label>
@@ -240,6 +199,7 @@ const EditProductPage = () => {
             value={productData.category}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md p-2"
+            required
           />
         </div>
 
@@ -273,6 +233,7 @@ const EditProductPage = () => {
               })
             }
             className="w-full border border-gray-300 rounded-md p-2"
+            placeholder="S, M, L, XL"
           />
         </div>
 
@@ -294,6 +255,7 @@ const EditProductPage = () => {
               })
             }
             className="w-full border border-gray-300 rounded-md p-2"
+            placeholder="Black, White, Red"
           />
         </div>
 
@@ -357,7 +319,7 @@ const EditProductPage = () => {
             className="bg-emerald-500 hover:bg-emerald-700 px-6 py-2 rounded text-white font-semibold transition"
             disabled={loading}
           >
-            {loading ? "Saving..." : isNewProduct ? "Create Product" : "Update Product"}
+            {loading ? "Creating..." : "Create Product"}
           </button>
           <button
             type="button"
@@ -372,4 +334,4 @@ const EditProductPage = () => {
   );
 };
 
-export default EditProductPage;
+export default CreateProduct;

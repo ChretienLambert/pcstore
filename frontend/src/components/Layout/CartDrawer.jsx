@@ -38,18 +38,22 @@ const CartDrawer = ({ drawerOpen, toggleCartDrawer }) => {
         )}
       </div>
       {/*Checkout button*/}
-      <div className="p-4 bg-white sticky bottom-0">
-        {cartItems && cartItems.length > 0 && (
-          <>
-            <button onClick={handleCheckout} className="btn-primary">
-              Checkout
-            </button>
-            <p className="text-sm tracking-tighter text-gray-500 mt-2 text-center">
-              Shipping calculated at checkout
-            </p>
-          </>
-        )}
-      </div>
+      <div className="p-4 bg-white sticky bottom-0 flex flex-col items-center justify-center">
+  {cartItems && cartItems.length > 0 && (
+    <>
+      <button 
+        onClick={handleCheckout} 
+        className="px-10 py-4 text-lg font-semibold text-white bg-blue-500 cursor-pointer rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
+      >
+        Checkout
+      </button>
+      <p className="text-sm tracking-tighter text-gray-500 mt-2 text-center">
+        Shipping calculated at checkout
+      </p>
+    </>
+  )}
+</div>
+
     </div>
   );
 };

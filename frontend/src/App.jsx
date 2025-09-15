@@ -25,6 +25,8 @@ import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
 import Build from "./pages/Build";
 import CheckoutPay from "./pages/CheckoutPay";
+import CreateProduct from "./components/Admin/CreateProduct";
+import About from "./pages/About";
 
 const App = () => {
   return (
@@ -48,7 +50,7 @@ const App = () => {
             <Route path="my-orders" element={<MyOrdersPage />} />
             <Route path="contact" element={<Contact />} />
             <Route path="faq" element={<FAQ />} />
-            <Route path="about" element={<Contact />} /> {/* simple alias for About; replace with real page if available */}
+            <Route path="about" element={<About />} />
             <Route path="build" element={<Build />} />
             <Route path="/checkout/:id/pay" element={<CheckoutPay />} />
           </Route>
@@ -58,6 +60,8 @@ const App = () => {
             <Route path="products" element={<ProductManagement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="orders" element={<OrderManagement />} />
+            <Route path="/admin/products/:id/edit" element={<EditProductPage />} />
+            <Route path="/admin/products/create" element={<CreateProduct />} />
             {/* full-page admin order detail */}
             <Route path="orders/:id" element={<AdminOrderDetails />} />
           </Route>

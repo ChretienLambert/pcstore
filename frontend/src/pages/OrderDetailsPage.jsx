@@ -127,13 +127,13 @@ const OrderDetailsPage = () => {
                 <div className="mt-3 space-y-2">
                   <button
                     onClick={() => navigate("/profile")}
-                    className="btn-ghost w-full py-2 rounded"
+                    className="px-6 py-3 bg-emerald-600 cursor-pointer text-white rounded-xl font-semibold shadow-md hover:bg-emerald-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300"
                   >
                     My Profile
                   </button>
                   <button
                     onClick={() => navigate("/")}
-                    className="btn-primary w-full py-2"
+                    className="px-6 py-3 bg-blue-500 text-white rounded-xl cursor-pointer font-semibold shadow-md hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300"
                   >
                     Back to shop
                   </button>
@@ -150,7 +150,7 @@ const OrderDetailsPage = () => {
           </div>
 
           <div>
-            <button onClick={() => navigate(-1)} className="btn-ghost w-full py-2 rounded">Back</button>
+            <button onClick={() => navigate(-1)} className="px-6 py-3 bg-red-600 text-white rounded-xl cursor-pointer font-semibold shadow-md hover:bg-red-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300">Back</button>
           </div>
         </aside>
       </div>

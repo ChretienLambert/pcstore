@@ -12,15 +12,32 @@ const componentSchema = new mongoose.Schema(
 
 const productSchema = new mongoose.Schema(
   {
+    // Basic product info
     name: { type: String, required: true },
     description: { type: String },
     price: { type: Number, required: true, default: 0 },
-    category: { type: String, default: "Uncategorized" },
-    subcategory: { type: String },
-    image: { type: String },
     countInStock: { type: Number, default: 0 },
 
-    // new fields
+    // Categorization
+    category: { type: String, default: "Uncategorized" },
+    subcategory: { type: String },
+
+    // Media
+    images: [
+      {
+        url: { type: String, required: true },
+      },
+    ],
+
+    // eCommerce metadata
+    sku: { type: String },
+    brand: { type: String },
+    sizes: [{ type: String }], // e.g. ["S", "M", "L"]
+    colors: [{ type: String }], // e.g. ["Red", "Blue"]
+    collections: { type: String },
+    material: { type: String },
+
+    // PC part compatibility
     isPart: { type: Boolean, default: false },
     partType: { type: String }, // e.g. "CPU","GPU","RAM"
     components: [componentSchema], // for assembled/custom PC saved as product

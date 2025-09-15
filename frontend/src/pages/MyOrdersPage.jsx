@@ -16,6 +16,11 @@ const MyOrdersPage = () => {
     navigate(`/order/${orderId}`);
   };
 
+  // Calculate total quantity of all items in an order
+  const getTotalQuantity = (order) => {
+    return order.orderItems?.reduce((total, item) => total + (item.quantity || 1), 0) || 0;
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
 
@@ -30,7 +35,7 @@ const MyOrdersPage = () => {
               <th className="py-2 px-4 sm:py-3">Order ID</th>
               <th className="py-2 px-4 sm:py-3">Created</th>
               <th className="py-2 px-4 sm:py-3">Shipping Address</th>
-              <th className="py-2 px-4 sm:py-3">Items</th>
+              <th className="py-2 px-4 sm:py-3">Items (Qty)</th>
               <th className="py-2 px-4 sm:py-3">Price</th>
               <th className="py-2 px-4 sm:py-3">Status</th>
             </tr>
@@ -62,7 +67,7 @@ const MyOrdersPage = () => {
                       : "N/A"}
                   </td>
                   <td className="py-2 px-2 sm:py-4 sm:px-4">
-                    {order.orderItems?.length || 0}
+                    {getTotalQuantity(order)} {/* This now shows 5 instead of 1 */}
                   </td>
                   <td className="py-2 px-2 sm:py-4 sm:px-4">
                     {order.totalPrice} FCFA

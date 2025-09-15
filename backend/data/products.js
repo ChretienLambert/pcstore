@@ -1,3 +1,4 @@
+
 // product.js:
 
 const products = [
@@ -17,8 +18,8 @@ const products = [
     material: "Aluminum",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1611924638863-3a4f1b0f8d1c",
-        altText: "ASUS ROG Strix G16",
+        url: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45",
+        altText: "ASUS ROG Strix G16 Gaming Laptop",
       },
     ],
     isFeatured: true,
@@ -49,8 +50,8 @@ const products = [
     material: "Aluminum",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1580910051072-0f3f9f0b3b6b",
-        altText: "Dell XPS 15",
+        url: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853",
+        altText: "Dell XPS 15 Creator Laptop",
       },
     ],
     isFeatured: false,
@@ -80,7 +81,7 @@ const products = [
     material: "Plastic/Aluminum",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d",
+        url: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd",
         altText: "Intel NUC Mini PC",
       },
     ],
@@ -112,7 +113,7 @@ const products = [
     material: "Steel/Plastic",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7",
+        url: "https://images.unsplash.com/photo-1562976540-1502c2145186",
         altText: "Custom Gaming Desktop",
       },
     ],
@@ -144,7 +145,7 @@ const products = [
     material: "Aluminum/Glass",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
+        url: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45",
         altText: "HP Envy All-in-One",
       },
     ],
@@ -175,7 +176,7 @@ const products = [
     material: "Steel",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1555617117-08bda36f2a8d",
+        url: "https://images.unsplash.com/photo-1560415751-3f3c5b75aada",
         altText: "Workstation Tower",
       },
     ],
@@ -207,7 +208,7 @@ const products = [
     material: "Aluminum",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1587202372775-3b5b5d3f4b9d",
+        url: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45",
         altText: "Lenovo Legion Slim 7",
       },
     ],
@@ -238,7 +239,7 @@ const products = [
     material: "Steel/Plastic",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1585079541039-5c6e9d5a3d2c",
+        url: "https://images.unsplash.com/photo-1562976540-1502c2145186",
         altText: "Acer Predator Helios Desktop",
       },
     ],
@@ -300,7 +301,7 @@ const products = [
     material: "Aluminum/Plastic",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e",
+        url: "https://images.unsplash.com/photo-1560415751-3f3c5b75aada",
         altText: "MSI Creator Desktop",
       },
     ],
@@ -331,7 +332,7 @@ const products = [
     material: "Aluminum/Plastic",
     images: [
       {
-        url: "https://images.unsplash.com/photo-1593642532973-d31b6557fa68",
+        url: "https://images.unsplash.com/photo-1592899677977-9c10ca588bbd",
         altText: "Beelink Mini Gaming PC",
       },
     ],
@@ -348,52 +349,54 @@ const products = [
     metaKeywords: "mini pc, intel arc",
   },
   {
-    name: "Ryzen 5 5600X",
-    description: "AMD Ryzen 5 desktop CPU",
+    name: "AMD Ryzen 5 5600X CPU",
+    description: "AMD Ryzen 5 5600X 6-Core 12-Thread Desktop Processor",
     price: 95000,
+    discountPrice: 89999,
+    countInStock: 15,
+    sku: "AMD-R5-5600X",
     category: "PC Parts",
     subcategory: "CPU",
+    brand: "AMD",
     isPart: true,
     partType: "CPU",
-    image: "/images/parts/ryzen5600x.jpg",
-    countInStock: 12,
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea",
+        altText: "AMD Ryzen 5 5600X CPU",
+      },
+    ],
+    isFeatured: false,
+    isPublished: true,
+    tags: ["cpu", "amd", "ryzen", "processor"],
+    rating: 4.7,
+    numReviews: 89,
   },
   {
-    name: "GeForce RTX 4060",
-    description: "NVIDIA RTX 4060 8GB",
+    name: "NVIDIA GeForce RTX 4060 GPU",
+    description: "NVIDIA GeForce RTX 4060 8GB GDDR6 Graphics Card",
     price: 220000,
+    discountPrice: 209999,
+    countInStock: 8,
+    sku: "NVIDIA-RTX-4060",
     category: "PC Parts",
     subcategory: "GPU",
+    brand: "NVIDIA",
     isPart: true,
     partType: "GPU",
-    image: "/images/parts/rtx4060.jpg",
-    countInStock: 6,
-  },
-  {
-    name: "8GB DDR4 RAM Stick",
-    description: "8GB DDR4 3200MHz memory module",
-    price: 18000,
-    category: "PC Parts",
-    subcategory: "RAM",
-    isPart: true,
-    partType: "RAM",
-    image: "/images/parts/ddr4-8gb.jpg",
-    countInStock: 40,
-  },
-  {
-    name: "Custom PC Example",
-    description: "Sample assembled custom PC (seed)",
-    price: 350000,
-    category: "Custom PC",
-    isPart: false,
-    components: [
-      { slot: "CPU", name: "Ryzen 5 5600X", price: 95000 },
-      { slot: "GPU", name: "GeForce RTX 4060", price: 220000 },
-      { slot: "RAM", name: "8GB DDR4 RAM Stick", price: 15000 },
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1591405351990-4726e331f141",
+        altText: "NVIDIA GeForce RTX 4060 GPU",
+      },
     ],
-    image: "/images/custom/sample-build.jpg",
-    countInStock: 1,
+    isFeatured: true,
+    isPublished: true,
+    tags: ["gpu", "nvidia", "rtx", "graphics-card"],
+    rating: 4.6,
+    numReviews: 67,
   },
-];
+]
+  
 
 module.exports = products;

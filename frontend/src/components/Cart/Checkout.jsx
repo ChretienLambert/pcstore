@@ -114,8 +114,8 @@ const Checkout = (props) => {
         </div>
 
         <div className="flex justify-end gap-3">
-          <button type="button" className="btn-ghost px-4 py-2 rounded" onClick={() => navigate(-1)}>Back to Shop</button>
-          <button type="submit" disabled={loading} className="btn-primary px-4 py-2 rounded">{loading ? "Creating..." : "Proceed to Payment"}</button>
+          <button type="button" className="px-6 py-3 bg-blue-600 text-white cursor-pointer rounded-xl font-semibold shadow-md hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300" onClick={() => navigate(-1)}>Back to Shop</button>
+          <button type="submit" disabled={loading} className="px-6 py-3 bg-emerald-600 cursor-pointer text-white rounded-xl font-semibold shadow-md hover:bg-emerald-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300">{loading ? "Creating..." : "Proceed to Payment"}</button>
         </div>
       </form>
     </div>

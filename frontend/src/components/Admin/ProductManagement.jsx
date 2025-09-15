@@ -22,37 +22,8 @@ const ProductManagement = () => {
     }
   };
 
-  const handleCreate = async () => {
-    // minimal default product — will be validated on backend
-    const defaultProduct = {
-      name: "New Product",
-      description: "Describe your product",
-      price: 0,
-      discountPrice: 0,
-      countInStock: 0,
-      sku: `TMP-${Date.now()}`,
-      category: "Uncategorized",
-      sizes: ["Standard"],
-      colors: ["Black"],
-      collections: "General",
-      images: [
-        { url: `${import.meta.env.VITE_BACKEND_URL}/style.css`, altText: "placeholder" },
-      ],
-    };
-    try {
-      const action = await dispatch(createProduct(defaultProduct)).unwrap();
-      const newId = action._id || action.id;
-      if (newId) {
-        navigate(`/admin/products/${newId}/edit`);
-      } else {
-        // reload list on failure to get id
-        dispatch(fetchAdminProducts());
-      }
-    } catch (err) {
-      console.error("Create product failed:", err);
-      dispatch(fetchAdminProducts());
-    }
-  };
+  const handleCreate = () => {
+  navigate("/admin/products/create");}
 
   if (loading) return <p>Loading...</p>
   if (error) return <p>Error: {error}</p>

@@ -61,7 +61,20 @@ const AdminOrderDetails = () => {
       const headers = {};
       const bearer = getBearerToken();
       if (bearer) headers.Authorization = bearer;
-      const res = await axios.put(`${BACKEND}/api/orders/${order._id}/status`, { status }, { headers });
+      
+      // For delivered status, we need to update both status and isDelivered
+      const updateData = { status };
+      if (status === "delivered") {
+        updateData.isDelivered = true;
+        updateData.deliveredAt = new Date().toISOString();
+      }
+      
+      const res = await axios.put(
+        `${BACKEND}/api/orders/${order._id}/status`, 
+        updateData, 
+        { headers }
+      );
+      
       setOrder(res.data);
       // refresh admin orders list so Orders page reflects change immediately
       try {
@@ -76,6 +89,9 @@ const AdminOrderDetails = () => {
       setStatusLoading(false);
     }
   };
+
+  // Check if order is delivered based on status or isDelivered field
+  const isDelivered = order?.status === "delivered" || order?.isDelivered;
 
   if (loading) return <div className="p-6">Loading order...</div>;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
@@ -143,10 +159,49 @@ const AdminOrderDetails = () => {
           <div className="card p-4">
             <h4 className="font-semibold mb-2">Admin Actions</h4>
             <div className="space-y-3">
-              <button onClick={() => handleUpdateStatus("paid")} disabled={statusLoading || order.isPaid} className="btn-primary w-full py-2 rounded disabled:opacity-50">Mark Paid</button>
-              <button onClick={() => handleUpdateStatus("pending")} disabled={statusLoading || !order.isPaid} className="btn-ghost w-full py-2 rounded">Mark Unpaid</button>
-              <button onClick={() => handleUpdateStatus("delivered")} disabled={statusLoading || order.isDelivered} className="bg-green-600 text-white w-full py-2 rounded disabled:opacity-50">Mark Delivered</button>
+              <button 
+                onClick={() => handleUpdateStatus("paid")} 
+                disabled={statusLoading || order.isPaid || order.status === "paid"} 
+                className="btn-primary w-full py-2 rounded disabled:opacity-50"
+              >
+                Mark Paid
+              </button>
+              <button 
+                onClick={() => handleUpdateStatus("pending")} 
+                disabled={statusLoading || (!order.isPaid && order.status !== "paid")} 
+                className="btn-ghost w-full py-2 rounded disabled:opacity-50"
+              >
+                Mark Unpaid
+              </button>
+              <button 
+                onClick={() => handleUpdateStatus("delivered")} 
+                disabled={statusLoading || isDelivered} 
+                className="bg-green-600 text-white w-full py-2 rounded disabled:opacity-50"
+              >
+                {isDelivered ? "Delivered" : "Mark Delivered"}
+              </button>
               <button onClick={() => navigate(-1)} className="btn-ghost w-full py-2 rounded">Back</button>
+            </div>
+          </div>
+
+          {/* Delivery Status Display */}
+          <div className="card p-4">
+            <h4 className="font-semibold mb-2">Delivery Status</h4>
+            <div className={`text-center p-3 rounded ${
+              isDelivered ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+            }`}>
+              {isDelivered ? (
+                <div>
+                  <div className="font-bold">✓ Delivered</div>
+                  {order.deliveredAt && (
+                    <div className="text-sm mt-1">
+                      {new Date(order.deliveredAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="font-bold">Pending Delivery</div>
+              )}
             </div>
           </div>
         </aside>

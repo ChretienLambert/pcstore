@@ -1,5 +1,5 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import {FaBoxOpen,FaClipboardList,FaUser,FaStore,FaSignOutAlt} from "react-icons/fa";
+import {FaBoxOpen,FaClipboardList,FaUser,FaStore,FaSignOutAlt, FaAccusoft} from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { logout } from "../../redux/slices/authSlice";
 import { clearCart } from "../../redux/slices/cartSlice";
@@ -16,8 +16,18 @@ const AdminSidebar = () => {
       <div className="mb-6">
         <Link to="/admin">PCSTORE</Link>
       </div>
-      <h2 className="text-xl font-medium mb-6 text-center">Admin Dashboard</h2>
       <nav className="flex flex-col space-y-2">
+        <NavLink
+          to="/admin"
+          className={({ isActive }) =>
+            isActive
+              ? "bg-gray-700 text-white py-3 px-4 rounded flex items-center space-x-2"
+              : "text-gray-300 hover:text-white py-3 px-4 rounded flex items-center space-x-2"
+          }
+        >
+          <FaAccusoft />
+          <span>Dashboard</span>
+        </NavLink>
         <NavLink
           to="/admin/users"
           className={({ isActive }) =>

@@ -29,6 +29,11 @@ const UserManagement = () => {
   const users = (adminState && adminState.users && adminState.users.length > 0) ? adminState.users : localUsers;
   const usersLoading = adminState && adminState.loading ? adminState.loading : loadingUsers;
 
+  // Calculate total quantity of items in an order
+  const getTotalQuantity = (order) => {
+    return order.orderItems?.reduce((total, item) => total + (item.quantity || 1), 0) || 0;
+  };
+
   useEffect(() => {
     // ensure orders are loaded so we can show user's orders
     dispatch(fetchAllOrders());
@@ -200,7 +205,7 @@ const UserManagement = () => {
               <option value="admin">Admin</option>
             </select>
             <div className="flex justify-end">
-              <button type="submit" className="btn-primary px-4 py-2">
+              <button type="submit" className="px-6 py-3 bg-emerald-600 cursor-pointer text-white rounded-xl font-semibold shadow-md hover:bg-emerald-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300">
                 Create User
               </button>
             </div>
@@ -296,7 +301,7 @@ const UserManagement = () => {
                     <div className="font-mono text-xs text-gray-500">#{String(o._id).slice(0,8)}</div>
                     <div>
                       <div className="font-medium">
-                        {o.orderItems?.length || 0} item{o.orderItems?.length > 1 ? "s" : ""} • {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""}
+                        {getTotalQuantity(o)} item{getTotalQuantity(o) > 1 ? "s" : ""} • {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""}
                       </div>
                       <div className="text-sm text-gray-500">Total: FCFA {Number(o.totalPrice || 0).toLocaleString()}</div>
                     </div>

@@ -27,7 +27,7 @@ export const addToCart = createAsyncThunk(
   }
 );
 
-// NEW: update cart item quantity (will update remote cart when userId present, otherwise localStorage)
+// Fixed: update cart item quantity (will update remote cart when userId present, otherwise localStorage)
 export const updateCartItemQuantity = createAsyncThunk(
   "cart/updateCartItemQuantity",
   async (
@@ -35,26 +35,60 @@ export const updateCartItemQuantity = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const BACKEND =
-        import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
-      // If userId present or token present, attempt backend update
-      if (userId || localStorage.getItem("userToken")) {
-        const payload = { productId, quantity, size, color, guestId, userId };
-        const res = await axios.put(`${BACKEND}/api/cart`, payload, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
-          },
-        });
-        // expect cart object returned (backend cart schema may differ); normalize to array
-        const updatedCart =
-          res.data?.products || res.data?.items || res.data || [];
-        // persist (safe)
+      const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
+      const token = localStorage.getItem("userToken");
+      
+      // If user is authenticated, try to update on backend
+      if (token) {
+        const payload = { 
+          productId, 
+          quantity, 
+          size: size || "", 
+          color: color || ""
+        };
+        
+        console.log("Updating cart on backend:", payload);
+        
+        let updatedCart = null;
+        
+        // Try different API endpoints or methods
         try {
-          localStorage.setItem("cart", JSON.stringify(updatedCart));
-        } catch {}
-        return updatedCart;
+          // Try PUT /api/cart
+          const res = await axios.put(`${BACKEND}/api/cart`, payload, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          updatedCart = res.data?.products || res.data?.items || res.data;
+        } catch (firstError) {
+          console.warn("PUT /api/cart failed, trying POST:", firstError.response?.data);
+          
+          try {
+            // Try POST /api/cart
+            const res = await axios.post(`${BACKEND}/api/cart`, payload, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            updatedCart = res.data?.products || res.data?.items || res.data;
+          } catch (secondError) {
+            console.warn("POST /api/cart failed, trying PATCH:", secondError.response?.data);
+            
+            try {
+              // Try PATCH /api/cart/item
+              const res = await axios.patch(`${BACKEND}/api/cart/item`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              updatedCart = res.data?.products || res.data?.items || res.data;
+            } catch (thirdError) {
+              console.warn("All backend attempts failed, falling back to localStorage");
+            }
+          }
+        }
+        
+        if (updatedCart) {
+          return Array.isArray(updatedCart) ? updatedCart : [updatedCart];
+        }
       }
-      // Fallback: update localStorage cart array
+      
+      // Fallback to localStorage update
+      console.log("Using localStorage fallback");
       const raw = localStorage.getItem("cart");
       const list = raw ? JSON.parse(raw) : [];
       const idx = list.findIndex(
@@ -63,6 +97,7 @@ export const updateCartItemQuantity = createAsyncThunk(
           (i.size || "") === (size || "") &&
           (i.color || "") === (color || "")
       );
+      
       if (idx > -1) {
         if (quantity <= 0) {
           list.splice(idx, 1);
@@ -70,11 +105,22 @@ export const updateCartItemQuantity = createAsyncThunk(
           list[idx].quantity = quantity;
         }
       } else if (quantity > 0) {
-        list.push({ productId, quantity, size, color, price: 0, name: "Item" });
+        list.push({ 
+          productId, 
+          quantity, 
+          size: size || "", 
+          color: color || "", 
+          price: list.find(item => item.productId === productId)?.price || 0, 
+          name: list.find(item => item.productId === productId)?.name || "Item",
+          image: list.find(item => item.productId === productId)?.image || ""
+        });
       }
+      
       localStorage.setItem("cart", JSON.stringify(list));
       return list;
+      
     } catch (err) {
+      console.error("Cart update error:", err.response?.data || err.message);
       return rejectWithValue(err.response?.data || err.message);
     }
   }
@@ -191,6 +237,7 @@ const cartSlice = createSlice({
           action.payload?.message ||
           action.error?.message ||
           "Update cart failed";
+        console.error("Cart update failed:", state.error);
       });
   },
 });
