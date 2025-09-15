@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -33,6 +33,8 @@ const EditProductPage = () => {
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updateError, setUpdateError] = useState("");
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (id) {
@@ -85,8 +87,12 @@ const EditProductPage = () => {
     setProductData((prevData) => ({ ...prevData, [name]: value }));
   };
 
+  const triggerImagePicker = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e?.target?.files?.[0];
     if (!file) return;
 
     const formData = new FormData();
@@ -324,12 +330,23 @@ const EditProductPage = () => {
         {/* Image upload */}
         <div className="mb-6">
           <label className="block font-semibold mb-2">Upload Image</label>
-          <input 
-            type="file" 
-            onChange={handleImageUpload} 
-            className="mb-2"
+          <input
+            ref={fileInputRef}
+            type="file"
             accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
           />
+          <div className="flex gap-2 items-center mb-4">
+            <button
+              type="button"
+              onClick={triggerImagePicker}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Upload Image
+            </button>
+            <span className="text-sm text-gray-500">Use the button to select an image file</span>
+          </div>
           {uploading && <p className="text-blue-600">Uploading Image...</p>}
           <div className="flex gap-4 mt-4 flex-wrap">
             {(productData.images || []).map((image, index) => (

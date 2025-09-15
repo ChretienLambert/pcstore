@@ -1,11 +1,21 @@
+// backend/models/Product.js
 const mongoose = require("mongoose");
 
 const componentSchema = new mongoose.Schema(
   {
     slot: { type: String },
-    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // optional link to a part product
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
     name: { type: String },
     price: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+const imageSchema = new mongoose.Schema(
+  {
+    url: { type: String },
+    altText: { type: String },
+    caption: { type: String },
   },
   { _id: false }
 );
@@ -15,32 +25,35 @@ const productSchema = new mongoose.Schema(
     // Basic product info
     name: { type: String, required: true },
     description: { type: String },
-    price: { type: Number, required: true, default: 0 },
+    price: { type: Number, default: 0 },
+    discountPrice: { type: Number, default: 0 },
     countInStock: { type: Number, default: 0 },
+    sku: { type: String, default: "" },
+    category: { type: String, default: "" },
+    brand: { type: String, default: "" },
 
-    // Categorization
-    category: { type: String, default: "Uncategorized" },
-    subcategory: { type: String },
+    // images: frontend expects either string or array of objects; we store array of objects
+    images: { type: [imageSchema], default: [] },
 
-    // Media
-    images: [
-      {
-        url: { type: String, required: true },
-      },
-    ],
+    // optional frontend metadata
+    rating: { type: Number, default: 0 },
+    numReviews: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
+    isPublished: { type: Boolean, default: true },
 
-    // eCommerce metadata
-    sku: { type: String },
-    brand: { type: String },
-    sizes: [{ type: String }], // e.g. ["S", "M", "L"]
-    colors: [{ type: String }], // e.g. ["Red", "Blue"]
+    // variant / presentation fields
+    sizes: [{ type: String }],
+    colors: [{ type: String }],
     collections: { type: String },
     material: { type: String },
 
-    // PC part compatibility
-    isPart: { type: Boolean, default: false },
-    partType: { type: String }, // e.g. "CPU","GPU","RAM"
-    components: [componentSchema], // for assembled/custom PC saved as product
+    // PC-specific
+    isPart: { type: Boolean, default: false }, // true for CPU/GPU/PSU etc
+    partType: { type: String }, // e.g. "CPU", "GPU", "RAM"
+    components: [componentSchema], // for prebuilt/custom PCs
+
+    // any tags for filtering
+    tags: [{ type: String }],
   },
   { timestamps: true }
 );

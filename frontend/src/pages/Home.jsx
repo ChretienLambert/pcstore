@@ -73,7 +73,18 @@ const Home = () => {
                 )}
                 {error && <p className="text-red-600">Error loading products</p>}
                 {!loading && !error && (
-                  <ProductGrid products={products.slice(0, 8)} gridCols={4} />
+                  // Featured: only laptops (category / collections / tags heuristics)
+                  <ProductGrid
+                    products={products
+                      .filter((p) => {
+                        const cat = String(p?.category || "").toLowerCase();
+                        const coll = String(p?.collections || p?.collection || "").toLowerCase();
+                        const tags = (p?.tags || []).join(" ").toLowerCase();
+                        return cat.includes("laptop") || coll.includes("laptop") || tags.includes("laptop");
+                      })
+                      .slice(0, 8)}
+                    gridCols={4}
+                  />
                 )}
               </div>
             </div>

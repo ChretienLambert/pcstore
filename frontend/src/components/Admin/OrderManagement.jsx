@@ -38,10 +38,9 @@ const OrderManagement = () => {
 
   // Determine payment status based on payment method and isPaid
   const getPaymentStatus = (order) => {
-    if (order.isPaid) {
+    // Treat card payments as paid immediately
+    if (order.isPaid || order.paymentMethod === "card") {
       return "Paid";
-    } else if (order.paymentMethod === "card") {
-      return "Pending"; // Card payment but not yet paid
     } else if (order.paymentMethod === "cash") {
       return "Unpaid"; // Cash on delivery - will pay later
     }

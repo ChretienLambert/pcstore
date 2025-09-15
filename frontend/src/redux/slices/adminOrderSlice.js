@@ -26,18 +26,42 @@ export const fetchAllOrders = createAsyncThunk(
   }
 );
 
-// update order delivery/payment/status (admin)
+// NOTE: updateOrderStatus will accept either an explicit `update` object OR a shorthand `status` string.
+// If `status` is provided, it will be translated into the admin API fields the backend expects.
 export const updateOrderStatus = createAsyncThunk(
   "adminOrders/updateOrderStatus",
-  async ({ id, update }, { rejectWithValue }) => {
+  async ({ id, update, status }, { rejectWithValue }) => {
     try {
       const headers = {};
       const bearer = getBearerToken();
       if (bearer) headers.Authorization = bearer;
-      // Call the admin route for updates
+
+      // map shorthand statuses to backend fields
+      let payload = { ...(update || {}) };
+      if (typeof status === "string") {
+        const s = status.toLowerCase();
+        if (s === "paid") {
+          payload.isPaid = true;
+          payload.paymentStatus = "paid";
+          payload.paidAt = new Date().toISOString();
+          payload.status = "paid";
+        } else if (s === "pending" || s === "unpaid") {
+          payload.isPaid = false;
+          payload.paymentStatus = "pending";
+          payload.status = "pending";
+        } else if (s === "delivered") {
+          payload.isDelivered = true;
+          payload.deliveredAt = new Date().toISOString();
+          payload.status = "delivered";
+        } else {
+          // allow arbitrary status strings to be sent through as `status`
+          payload.status = s;
+        }
+      }
+
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/api/admin/orders/${id}`,
-        update,
+        payload,
         { headers }
       );
       return response.data;
@@ -84,18 +108,14 @@ const adminOrderSlice = createSlice({
       })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
         state.loading = false;
-        // Normalize payload to an array
         const list = Array.isArray(action.payload)
           ? action.payload
           : Array.isArray(action.payload?.orders)
           ? action.payload.orders
           : [];
-
-        // Deduplicate by _id (safe if backend or client accidentally returns duplicates)
         const map = new Map();
         list.forEach((o) => {
-          if (!o || !o._id) return;
-          map.set(String(o._id), o);
+          if (o && o._id) map.set(String(o._id), o);
         });
         state.orders = Array.from(map.values());
         state.totalOrders = state.orders.length;
@@ -119,30 +139,15 @@ const adminOrderSlice = createSlice({
         if (idx !== -1) {
           state.orders[idx] = updated;
         } else {
-          // if not present insert at top
+          // insert to top
           state.orders.unshift(updated);
-          // ensure uniqueness
-          const uniq = new Map();
-          state.orders.forEach((o) => uniq.set(String(o._id), o));
-          state.orders = Array.from(uniq.values());
         }
-        // recalc totals
         state.totalOrders = state.orders.length;
-        state.totalSales = state.orders.reduce(
-          (acc, order) => acc + Number(order.totalPrice || 0),
-          0
-        );
       })
 
       .addCase(deleteOrder.fulfilled, (state, action) => {
-        state.orders = state.orders.filter(
-          (order) => String(order._id) !== String(action.payload)
-        );
+        state.orders = state.orders.filter((o) => o._id !== action.payload);
         state.totalOrders = state.orders.length;
-        state.totalSales = state.orders.reduce(
-          (acc, order) => acc + Number(order.totalPrice || 0),
-          0
-        );
       });
   },
 });

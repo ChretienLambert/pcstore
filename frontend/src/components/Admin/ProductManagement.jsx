@@ -49,7 +49,11 @@ const ProductManagement = () => {
           <thead className="bg-gray-100 text-xs uppercase text-gray-700">
             <tr>
               <th className="py-3 px-4">Name</th>
+              <th className="py-3 px-4">Category</th>
+              <th className="py-3 px-4">Brand</th>
               <th className="py-3 px-4">Price</th>
+              <th className="py-3 px-4">Stock</th>
+              <th className="py-3 px-4">Part?</th>
               <th className="py-3 px-4">SKU</th>
               <th className="py-3 px-4">Actions</th>
             </tr>
@@ -59,13 +63,15 @@ const ProductManagement = () => {
               products.map((product) => (
                 <tr
                   key={product._id}
-                  className="border-b hover:bg-gray-50 cursor-pointer"
+                  className="border-b hover:bg-gray-50"
                 >
-                  <td className="p-4 font-medium text-gray-900 whitespace-nowrap">
-                    {product.name}
-                  </td>
-                  <td className="p-4">{product.price} FCFA</td>
-                  <td className="p-4">{product.sku}</td>
+                  <td className="p-4 font-medium text-gray-900">{product.name}</td>
+                  <td className="p-4">{product.category || product.collections || "-"}</td>
+                  <td className="p-4">{product.brand || "-"}</td>
+                  <td className="p-4">{Number(product.price || 0).toLocaleString()} FCFA</td>
+                  <td className="p-4">{product.countInStock ?? product.stock ?? "-"}</td>
+                  <td className="p-4">{product.isPart ? "Yes" : "No"}</td>
+                  <td className="p-4">{product.sku || "-"}</td>
                   <td className="p-4">
                     <Link
                       to={`/admin/products/${product._id}/edit`}
@@ -84,7 +90,7 @@ const ProductManagement = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="p-4 text-center text-gray-500">
+                <td colSpan={8} className="p-4 text-center text-gray-500">
                   No Products found
                 </td>
               </tr>

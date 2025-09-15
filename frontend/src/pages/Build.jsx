@@ -1,8 +1,8 @@
+// frontend/src/pages/Build.jsx
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { createOrder } from "../redux/slices/checkoutSlice";
+// import { createOrder } from "../redux/slices/checkoutSlice";
 import { addToCart } from "../redux/slices/cartSlice";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import fallbackImage from "../assets/cheap-pc.jpg";
 
@@ -21,13 +21,14 @@ const STORAGE_KEY = "customBuildDraft_v1";
 
 const Build = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
+  // navigate removed as create order / checkout flow is removed
   const [build, setBuild] = useState({});
   const [loading, setLoading] = useState(false);
   const [parts, setParts] = useState([]);
   const [successMsg, setSuccessMsg] = useState(null);
   const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:9000";
 
+  // Load draft from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY) || "{}";
@@ -38,7 +39,7 @@ const Build = () => {
     }
   }, []);
 
-  // fetch product catalog once to populate droplists
+  // Fetch parts list
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -56,7 +57,7 @@ const Build = () => {
     };
   }, []);
 
-  // persist build draft when user changes selections
+  // Persist draft
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(build || {}));
@@ -64,6 +65,20 @@ const Build = () => {
       console.warn("Failed to save build draft", e);
     }
   }, [build]);
+
+  // helper: normalize image into a string URL acceptable to backend
+  const normalizeImageForOrder = (image) => {
+    if (!image) return fallbackImage || "";
+    if (typeof image === "string") return image;
+    // object shapes
+    if (image.url) return image.url;
+    if (image.src) return image.src;
+    if (image.path) return image.path.startsWith("http") ? image.path : `${BACKEND}${image.path}`;
+    if (image.secure_url) return image.secure_url;
+    if (image.publicUrl) return image.publicUrl;
+    // fallback
+    return fallbackImage || "";
+  };
 
   const getOptionsForSlot = (slot) => {
     const candidates = parts.filter(
@@ -84,9 +99,10 @@ const Build = () => {
         match(p.category) ||
         match(p.collections)
     );
-    return matched.length ? matched : candidates.slice(0, 40);
+    return matched.length ? matched : candidates.slice(0, 60);
   };
 
+  // removed "custom" option handling — only product selections or none allowed
   const handleSelectPart = (slot, value) => {
     if (value === "none") {
       setBuild((s) => {
@@ -96,12 +112,9 @@ const Build = () => {
       });
       return;
     }
-    if (value === "custom") {
-      setBuild((s) => ({ ...s, [slot]: { custom: true, name: "", price: 0 } }));
-      return;
-    }
     const p = parts.find((x) => String(x._id || x.id) === String(value));
     if (p) {
+      // store a lightweight object; keep images array on part
       setBuild((s) => ({ ...s, [slot]: { ...p, productId: p._id || p.id } }));
     }
   };
@@ -113,62 +126,41 @@ const Build = () => {
     });
   };
 
+  // Build order items array: ensure image is a string
   const getOrderItemsFromBuild = (buildObj) => {
     const items = PART_SLOTS.map((slot) => buildObj[slot]).filter(Boolean);
-    return items.map((part, i) => ({
-      // only include productId for real catalog parts; omit "product" entirely for customs
-      productId: part?.productId || null,
-      name: part?.name || part?.customName || `Custom ${PART_SLOTS[i]}`,
-      quantity: 1,
-      price: Number(part?.price || 0),
-      image: part?.image || part?.images?.[0] || part?.img || fallbackImage,
-      isCustomBuild: true,
-      components: [{ slot: part?.partType || PART_SLOTS[i], name: part?.name }],
-    }));
-  };
 
-  const handleCreateOrder = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const orderItems = getOrderItemsFromBuild(build);
-      if (!orderItems.length) {
-        setSuccessMsg("Your build is empty. Please select components.");
-        setTimeout(() => setSuccessMsg(null), 2500);
-        setLoading(false);
-        return;
-      }
-      const itemsPrice = orderItems.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-      const idempotencyKey = `build-${Date.now()}`;
-      const payload = {
-        orderItems,
-        shippingAddress: build.shippingAddress || {},
-        paymentMethod: "CustomBuild",
-        itemsPrice,
-        shippingPrice: 0,
-        taxPrice: 0,
-        totalPrice: itemsPrice,
+    return items.map((part, i) => {
+      const slotName = part?.partType || PART_SLOTS[i];
+      const name = part?.name || part?.customName || `Custom ${slotName}`;
+      const price = Number(part?.price || 0);
+      const productId = part?.productId || null;
+
+      // choose an image string (url) for backend
+      const rawImg = part?.image || part?.images?.[0] || part?.img || fallbackImage;
+      const imageUrl = normalizeImageForOrder(rawImg);
+
+      return {
+        productId,                         // null for pure customs
+        name,
+        quantity: 1,
+        price,
+        image: imageUrl,                   // IMPORTANT: string, not object
         isCustomBuild: true,
-        idempotencyKey,
+        // detailed components for order history / rebuildability
+        components: [
+          {
+            slot: slotName,
+            name,
+            price,
+            productId,
+          },
+        ],
       };
-
-      console.log("createOrder dispatched (Build.jsx)", { idempotencyKey, items: orderItems.length });
-      console.log("createOrder payload (Build.jsx)", payload);
-      const res = await dispatch(createOrder(payload)).unwrap();
-      console.log("createOrder result (Build.jsx)", res);
-      if (res && (res._id || res.id)) navigate(`/order/${res._id || res.id}`);
-      else navigate("/order-confirmation");
-    } catch (err) {
-      console.error("createOrder failed (Build.jsx)", err);
-      // delete draft on error as requested
-      localStorage.removeItem(STORAGE_KEY);
-      setBuild({});
-      setSuccessMsg("Order failed — draft deleted");
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
+
+  // removed handleCreateOrder (checkout / create order) per request
 
   const addBuildToCart = () => {
     const items = getOrderItemsFromBuild(build);
@@ -178,21 +170,23 @@ const Build = () => {
       return;
     }
     const totalPrice = items.reduce((s, it) => s + Number(it.price || 0) * Number(it.quantity || 1), 0);
-    // Do NOT include "product" or other fields that backend/mongoose may cast.
+
+    // normalized image for the cart item
+    const imageForCart = items.length ? (items[0].image || fallbackImage) : fallbackImage;
+
     const cartItem = {
-      name: `Custom Build — ${items.map((i) => i.name).filter(Boolean).slice(0, 3).join(", ")}`,
+      name: `Custom Build — ${items.map((i) => i.name).filter(Boolean).slice(0, 6).join(", ")}`,
       price: totalPrice,
       quantity: 1,
-      image: items.find((i) => i.image)?.image || fallbackImage,
+      image: imageForCart || fallbackImage,
       isCustomBuild: true,
-      components: items.map((i) => ({ slot: i.components?.[0]?.slot, name: i.name, price: i.price })),
+      components: items.map((i) => ({ slot: i.components?.[0]?.slot, name: i.name, price: i.price, productId: i.productId })),
       meta: { builtAt: new Date().toISOString() },
     };
 
     console.log("Add custom build to cart", { cartItem });
     dispatch(addToCart(cartItem));
 
-    // transient success message NEXT TO BUTTONS (no route change)
     setSuccessMsg("Custom build added to cart");
     setTimeout(() => setSuccessMsg(null), 2500);
   };
@@ -205,41 +199,43 @@ const Build = () => {
         {PART_SLOTS.map((slot) => {
           const selected = build[slot];
           const options = getOptionsForSlot(slot);
+          const value = selected?.productId || "none";
           return (
-            <div key={slot} className="p-4 bg-white rounded shadow">
+            <div key={slot} className="p-4 bg-white rounded shadow hover:shadow-lg transition-shadow overflow-hidden">
               <label className="block font-semibold mb-2">{slot}</label>
               <div className="flex gap-3 items-center">
                 <select
-                  value={selected?.productId || (selected?.custom ? "custom" : (selected ? "selected" : "none"))}
+                  value={value}
                   onChange={(e) => handleSelectPart(slot, e.target.value)}
-                  className="input flex-1"
+                  className="input flex-1 min-w-0 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 >
                   <option value="none">-- None --</option>
-                  <option value="custom">Custom entry</option>
+                  {/* removed custom entry option to keep list strictly products */}
                   {options.map((p) => (
                     <option key={p._id || p.id} value={p._id || p.id}>
                       {p.name} — FCFA {Number(p.price || 0).toLocaleString()}
                     </option>
                   ))}
                 </select>
-                <div className="text-sm text-gray-500">Selected: {selected?.name || "None"}</div>
+
+                <div className="text-sm text-gray-500 min-w-0 truncate" title={selected?.name || "None"}>
+                  Selected: {selected?.name || "None"}
+                </div>
               </div>
 
-              {selected?.custom && (
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <input
-                    placeholder={`${slot} name`}
-                    value={selected.name || ""}
-                    onChange={(e) => handleCustomChange(slot, "name", e.target.value)}
-                    className="input"
+              {/* show a small preview image and price */}
+              {selected && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    src={selected?.images?.[0]?.url || selected?.image || selected?.images?.[0] || fallbackImage}
+                    alt={selected?.name}
+                    className="w-16 h-16 object-cover rounded border flex-shrink-0"
+                    style={{ aspectRatio: "1/1" }}
                   />
-                  <input
-                    placeholder="Price"
-                    type="number"
-                    value={selected.price || 0}
-                    onChange={(e) => handleCustomChange(slot, "price", e.target.value)}
-                    className="input"
-                  />
+                  <div className="text-sm min-w-0">
+                    <div className="font-medium truncate" title={selected?.name}>{selected?.name}</div>
+                    <div className="text-gray-500 truncate">FCFA {Number(selected?.price || 0).toLocaleString()}</div>
+                  </div>
                 </div>
               )}
             </div>
@@ -248,7 +244,7 @@ const Build = () => {
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={addBuildToCart} disabled={loading} className="btn-primary">
+        <button onClick={addBuildToCart} disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-60">
           {loading ? "Adding..." : "Add build to cart"}
         </button>
 
@@ -257,14 +253,15 @@ const Build = () => {
             localStorage.removeItem(STORAGE_KEY);
             setBuild({});
           }}
-          className="btn-ghost"
+          className="px-4 py-2 border rounded bg-white hover:bg-gray-50"
         >
           Clear Draft
         </button>
 
-        {/* transient message near buttons */}
         {successMsg && <div className="ml-4 text-sm text-green-700">{successMsg}</div>}
       </div>
+
+      {/* Checkout / create order removed as requested */}
     </div>
   );
 };

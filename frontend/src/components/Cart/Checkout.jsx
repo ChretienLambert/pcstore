@@ -80,10 +80,10 @@ const Checkout = (props) => {
 
       <form onSubmit={(e) => { e.preventDefault(); handlePlaceOrder(); }}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <input placeholder="Address" value={shipping.address} onChange={handleChange("address")} className="p-2 border rounded input" />
-          <input placeholder="City" value={shipping.city} onChange={handleChange("city")} className="p-2 border rounded input" />
-          <input placeholder="Postal Code" value={shipping.postalCode} onChange={handleChange("postalCode")} className="p-2 border rounded input" />
-          <input placeholder="Country" value={shipping.country} onChange={handleChange("country")} className="p-2 border rounded input" />
+          <input placeholder="Address" value={shipping.address} onChange={handleChange("address")} className="p-2 border rounded input" required />
+          <input placeholder="City" value={shipping.city} onChange={handleChange("city")} className="p-2 border rounded input" required />
+          <input placeholder="Postal Code" value={shipping.postalCode} onChange={handleChange("postalCode")} className="p-2 border rounded input" required />
+          <input placeholder="Country" value={shipping.country} onChange={handleChange("country")} className="p-2 border rounded input" required />
         </div>
 
         <div className="mb-4">

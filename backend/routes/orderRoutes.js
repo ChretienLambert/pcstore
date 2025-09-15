@@ -1,3 +1,4 @@
+// backend/routes/orderRoutes.js
 const express = require("express");
 const router = express.Router();
 const Order = require("../models/Order");
@@ -5,24 +6,79 @@ const Checkout = require("../models/Checkout");
 const { protect, admin } = require("../middleware/authMiddleware");
 const mongoose = require("mongoose");
 const Cart = require("../models/Cart");
+// --- added Product model to validate & update stock counts ---
+const Product = require("../models/Product");
 
-// replace the fallback host that was failing DNS with a reliable placeholder
+// fallback image if we can't determine a usable image URL
 const DEFAULT_IMAGE =
   process.env.DEFAULT_PRODUCT_IMAGE ||
   "https://placehold.co/400x300?text=No+Image";
 
+// Optional: FRONTEND_BASE_URL can be set in env if you host images under your frontend domain
+// e.g. FRONTEND_BASE_URL=https://example.com
+const FRONTEND_BASE = process.env.FRONTEND_BASE_URL || "";
+
+// isValidObjectId helper
 const isValidObjectId = (id) =>
   !!id && mongoose.Types.ObjectId.isValid(String(id));
+
+/**
+ * Normalize image payload into a string URL for order records.
+ * Accepts:
+ *  - string absolute URL ("https://...")
+ *  - string relative path ("/static/...", "src/assets/...") -> optional FRONTEND_BASE prefix
+ *  - object with properties { url, src, path, secure_url, publicUrl }
+ *  - otherwise returns DEFAULT_IMAGE
+ */
+function normalizeImageToString(image, req = null) {
+  if (!image) return DEFAULT_IMAGE;
+
+  // If already a string
+  if (typeof image === "string") {
+    const s = image.trim();
+    if (!s) return DEFAULT_IMAGE;
+    // absolute URL -> use as-is
+    if (s.startsWith("http://") || s.startsWith("https://")) return s;
+    // relative path starting with // (protocol-relative) -> prefix https:
+    if (s.startsWith("//")) return `https:${s}`;
+    // path-like string e.g. "/uploads/..." or "src/assets/..." -> try FRONTEND_BASE or host if available
+    if (s.startsWith("/")) {
+      if (FRONTEND_BASE) return `${FRONTEND_BASE}${s}`;
+      return s;
+    }
+    // other non-http strings (like "data:image/..." ) -> accept common data URIs
+    if (s.startsWith("data:")) return s;
+    // unknown string pattern -> fallback to DEFAULT_IMAGE
+    return DEFAULT_IMAGE;
+  }
+
+  // If it's an object, try common fields
+  if (typeof image === "object") {
+    const tryFields = ["url", "src", "path", "secure_url", "publicUrl", "filename"];
+    for (const f of tryFields) {
+      const v = image[f];
+      if (v && typeof v === "string") {
+        if (v.startsWith("http")) return v;
+        if (v.startsWith("/")) return FRONTEND_BASE ? `${FRONTEND_BASE}${v}` : v;
+        return v;
+      }
+    }
+    // lastly, if there's nested object like image.url.value etc, attempt JSON-stringify fallback -> no, prefer DEFAULT_IMAGE
+    return DEFAULT_IMAGE;
+  }
+
+  // anything else fallback
+  return DEFAULT_IMAGE;
+}
 
 //@route GET api/order/my-orders
 //@desc Get logged-in user's orders
 //@access Private
 router.get("/my-orders", protect, async (req, res) => {
   try {
-    //Find the orders for the autenticated user
     const orders = await Order.find({ user: req.user._id }).sort({
       createdAt: -1,
-    }); //sort by most recent orders
+    });
     res.json(orders);
   } catch (error) {
     console.error(error);
@@ -49,111 +105,129 @@ router.post("/", protect, async (req, res) => {
     const normalized = items
       .map((it) => {
         if (!it) return null;
-        const n = { ...it };
-        // ensure image exists (backend fallback)
-        n.image = n.image || DEFAULT_IMAGE;
-        n.name =
-          n.name || (n.productId ? String(n.productId) : "Unknown Product");
-        n.quantity = Number(n.quantity || 1);
-        n.price = Number(n.price || 0);
-        // ensure we only set product if it's a valid ObjectId
-        if (n.product && !isValidObjectId(n.product)) delete n.product;
-        if (n.productId && !isValidObjectId(n.productId)) delete n.productId;
-        return n;
+        const item = { ...(it || {}) };
+        // normalize keys
+        item.quantity = Number(item.quantity || item.qty || 1);
+        item.price = Number(item.price || item.unitPrice || 0);
+        item.name = item.name || item.title || "Unnamed product";
+        item.image = normalizeImageToString(item.image || (item.images && item.images[0]) || DEFAULT_IMAGE);
+        if (item.productId && !isValidObjectId(item.productId)) {
+          delete item.productId;
+        } else if (item.productId) {
+          item.productId = String(item.productId);
+        }
+        return item;
       })
       .filter(Boolean);
 
-    // helpful debug log of final payload (remove or lower log level in production)
-    console.log("Create order payload:", {
-      user: req.user ? req.user._id : null,
-      itemsCount: normalized.length,
-      idempotencyKey,
-      itemsPreview: normalized.slice(0, 5).map((i) => ({
-        name: i.name,
-        image: i.image,
-        qty: i.quantity,
-        price: i.price,
-      })),
-    });
-
     if (!normalized.length) {
-      return res.status(400).json({ message: "Cart is empty" });
+      return res.status(400).json({ message: "No valid order items provided" });
     }
 
-    const order = new Order({
-      user: req.user._id,
-      orderItems: normalized,
-      shippingAddress,
-      paymentMethod,
-      itemsPrice,
-      shippingPrice,
-      taxPrice,
-      totalPrice,
-      idempotencyKey,
-    });
+    const parsedItemsPrice = Number(itemsPrice || 0);
+    const parsedShippingPrice = Number(shippingPrice || 0);
+    const parsedTaxPrice = Number(taxPrice || 0);
+    const parsedTotalPrice = Number(totalPrice || parsedItemsPrice + parsedShippingPrice + parsedTaxPrice);
 
-    const createdOrder = await order.save();
+    const decremented = [];
 
-    // Clear server-side cart records for this user (best-effort)
     try {
-      await Cart.deleteMany({ user: req.user._id }).catch(() => {});
-    } catch (e) {
-      console.error("Failed to clear user cart after order:", e);
-    }
+      for (const it of normalized) {
+        if (it.productId) {
+          const qty = Number(it.quantity || 1);
+          const updated = await Product.findOneAndUpdate(
+            { _id: it.productId, countInStock: { $gte: qty } },
+            { $inc: { countInStock: -qty } },
+            { new: true }
+          );
 
-    res.status(201).json(createdOrder);
+          if (!updated) {
+            for (const d of decremented) {
+              try {
+                await Product.findByIdAndUpdate(d.productId, { $inc: { countInStock: d.qty } });
+              } catch (revertErr) {
+                console.error("Failed to revert stock for", d.productId, revertErr);
+              }
+            }
+            return res.status(400).json({ message: `Insufficient stock for product: ${it.name}` });
+          }
+
+          decremented.push({ productId: it.productId, qty });
+        }
+      }
+
+      // All inventory reserved, create the order
+      const order = new Order({
+        user: req.user._id,
+        orderItems: normalized.map((it) => ({
+          name: it.name,
+          image: it.image,
+          price: it.price,
+          quantity: it.quantity,
+          product: it.productId || undefined,
+          isCustomBuild: Boolean(it.isCustomBuild),
+          components: it.components || [],
+        })),
+        shippingAddress: shippingAddress || {},
+        paymentMethod: paymentMethod || "cod",
+        itemsPrice: parsedItemsPrice,
+        shippingPrice: parsedShippingPrice,
+        taxPrice: parsedTaxPrice,
+        totalPrice: parsedTotalPrice,
+        status: paymentMethod === "card" ? "paid" : "pending",
+        isPaid: paymentMethod === "card" ? true : false,
+        paidAt: paymentMethod === "card" ? new Date() : undefined,
+      });
+
+      const saved = await order.save();
+      await saved.populate("user", "name email role");
+      return res.status(201).json(saved);
+    } catch (err) {
+      for (const d of decremented) {
+        try {
+          await Product.findByIdAndUpdate(d.productId, { $inc: { countInStock: d.qty } });
+        } catch (revertErr) {
+          console.error("Failed to revert stock after error for", d.productId, revertErr);
+        }
+      }
+      console.error("Order creation error:", err);
+      return res.status(500).json({ message: "Failed to create order" });
+    }
   } catch (error) {
-    console.error("Create order error:", error);
-    res.status(500).json({ message: error.message || "Server error" });
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
 // GET single order (populated)
 router.get("/:id", protect, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate("user", "name email role")
-      .lean();
-    if (!order) return res.status(404).json({ message: "Order not found" });
-
-    // determine order owner id (order.user may be null)
-    const orderUserId = order.user
-      ? String(order.user._id || order.user)
-      : null;
-    const requesterId = req.user ? String(req.user._id) : null;
-
-    // only owner or admin can view order
-    if (orderUserId !== requesterId && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized" });
+    const { id } = req.params;
+    if (!id || !mongoose.Types.ObjectId.isValid(String(id))) {
+      return res.status(400).json({ message: "Invalid order id" });
     }
-
-    return res.json(order);
+    const order = await Order.findById(id).populate("user", "name email");
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json(order);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server Error" });
   }
 });
 
 // Admin: update order status (confirm payment for COD etc.)
 router.put("/:id/status", protect, admin, async (req, res) => {
   try {
-    const { status } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-
-    order.status = status || order.status;
-
-    // if admin marks as 'paid' confirm payment fields
-    if (status === "paid") {
-      order.isPaid = true;
-      order.paidAt = new Date();
-    }
-
-    await order.save();
-    return res.json(order);
+    if (typeof req.body.status !== "undefined") order.status = req.body.status;
+    if (typeof req.body.isPaid !== "undefined") order.isPaid = Boolean(req.body.isPaid);
+    if (req.body.paidAt) order.paidAt = req.body.paidAt;
+    const updated = await order.save();
+    res.json(updated);
   } catch (err) {
-    console.error("Update order status error:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
   }
 });
 

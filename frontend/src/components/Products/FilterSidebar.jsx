@@ -17,13 +17,60 @@ const FilterSidebar = () => {
 
   const [priceRange, setPriceRange] = useState([0, MAX_PRICE]);
 
-  // Available filter options (added missing "All-in-One")
-  const categories = ["Laptops", "Mini PC", "Desktops", "All-in-One", "Workstations"];
-  const colors = ["Black", "Silver", "Space Gray"];
-  const sizes = ["Standard", "One Size", "Full Tower", "Mid Tower", "Small Form Factor"];
+  // --- Expanded filter options ---
+  const categories = [
+    "Laptops",
+    "Gaming Laptops",
+    "Ultrabooks",
+    "Mini PC",
+    "Desktops",
+    "All-in-One",
+    "Workstations",
+    "Chromebooks",
+    "2-in-1 Convertible",
+  ];
+
+  const colors = [
+    "Black",
+    "Silver",
+    "Space Gray",
+    "White",
+    "Blue",
+    "Red",
+    "Gold",
+  ];
+
+  const sizes = [
+    "Standard",
+    "One Size",
+    "Full Tower",
+    "Mid Tower",
+    "Small Form Factor",
+    "13-inch",
+    "14-inch",
+    "15-inch",
+    "17-inch",
+  ];
+
   const brands = [
-    "HP", "ASUS", "Dell", "Apple", "Acer", "Lenovo",
-    "MSI", "Beelink", "Custom Build", "WorkBuild", "Intel"
+    "HP",
+    "ASUS",
+    "Dell",
+    "Apple",
+    "Acer",
+    "Lenovo",
+    "MSI",
+    "Razer",
+    "Beelink",
+    "Intel NUC",
+    "Custom Build",
+    "WorkBuild",
+    "Gigabyte",
+    "Samsung",
+    "Microsoft Surface",
+    "Huawei",
+    "LG",
+    "Alienware",
   ];
 
   const handleFilterChange = (e) => {
@@ -34,7 +81,9 @@ const FilterSidebar = () => {
       if (checked) {
         newFilters[name] = [...(newFilters[name] || []), value];
       } else {
-        newFilters[name] = (newFilters[name] || []).filter((item) => item !== value);
+        newFilters[name] = (newFilters[name] || []).filter(
+          (item) => item !== value
+        );
       }
     } else {
       newFilters[name] = value;
@@ -48,8 +97,6 @@ const FilterSidebar = () => {
     const params = new URLSearchParams();
 
     Object.entries(newFilters).forEach(([key, val]) => {
-      // do not remap local 'category' to 'collections' here.
-      // keep category => category, collections should be a separate filter if needed.
       const outKey = key;
 
       if (Array.isArray(val)) {
@@ -70,7 +117,6 @@ const FilterSidebar = () => {
     const minP = Number(params.minPrice) || 0;
     const maxP = Number(params.maxPrice) || MAX_PRICE;
 
-    // prefer params.category but accept legacy params.collections if present
     setFilters({
       category: params.category || params.collections || params.collection || "",
       color: params.color || "",
@@ -91,7 +137,11 @@ const FilterSidebar = () => {
   };
 
   const commitPriceChange = () => {
-    const newFilters = { ...filters, minPrice: priceRange[0], maxPrice: priceRange[1] };
+    const newFilters = {
+      ...filters,
+      minPrice: priceRange[0],
+      maxPrice: priceRange[1],
+    };
     setFilters(newFilters);
     updateURLParams(newFilters);
   };
@@ -102,7 +152,9 @@ const FilterSidebar = () => {
 
       {/* Category Filter */}
       <div className="mb-6">
-        <label className="block text-gray-600 font-medium mb-2">Category</label>
+        <label className="block text-gray-600 font-medium mb-2">
+          Category
+        </label>
         {categories.map((category) => (
           <div key={category} className="flex items-center mb-1">
             <input
@@ -128,12 +180,19 @@ const FilterSidebar = () => {
               type="button"
               name="color"
               onClick={() => {
-                const newFilters = { ...filters, color: filters.color === color ? "" : color };
+                const newFilters = {
+                  ...filters,
+                  color: filters.color === color ? "" : color,
+                };
                 setFilters(newFilters);
                 updateURLParams(newFilters);
               }}
               className={`w-8 h-8 rounded-full border cursor-pointer transition hover:scale-105 
-                ${filters.color === color ? "ring-2 ring-blue-500" : "border-gray-300"}`}
+                ${
+                  filters.color === color
+                    ? "ring-2 ring-blue-500"
+                    : "border-gray-300"
+                }`}
               style={{ backgroundColor: color.toLowerCase() }}
             />
           ))}
@@ -178,7 +237,9 @@ const FilterSidebar = () => {
 
       {/* Price Range */}
       <div className="mb-8">
-        <label className="block text-gray-600 font-medium mb-2">Price Range</label>
+        <label className="block text-gray-600 font-medium mb-2">
+          Price Range
+        </label>
         <input
           type="range"
           min={0}
