@@ -5,7 +5,6 @@
     { "src": "server.js", "use": "@vercel/node" }
   ],
   "routes": [
-    // Only forward API paths to the serverless function. Static assets and root will be handled by the frontend project.
     { "src": "/api/(.*)", "dest": "server.js" }
   ]
 }
