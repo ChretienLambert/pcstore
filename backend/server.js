@@ -15,38 +15,19 @@ const productAdminRoutes = require("./routes/productAdminRoutes");
 const adminOrderRoutes = require("./routes/adminOrderRoutes");
 
 dotenv.config();
-// Defer connecting to the database until a request is received so imports don't throw
-// in serverless environments (Vercel) when env vars might not be set at import time.
-// We'll ensure a DB connection for API routes using a lightweight middleware below.
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Lightweight middleware to ensure DB connection for API requests.
-// It attempts to connect on the first request and will reuse the connection thereafter.
-const ensureDb = async (req, res, next) => {
-  // Only run for API routes; static or root routes don't need DB.
-  if (!req.path.startsWith('/api/')) return next();
-  try {
-    await connectDB();
-    return next();
-  } catch (err) {
-    console.error('Database connection error:', err && (err.message || err));
-    // For a simple health probe, let '/api/_health' return a helpful response
-    if (req.path === '/api/_health') {
-      return res.status(200).json({ status: 'ok', db: 'unavailable' });
-    }
-    return res.status(500).json({ message: 'Database connection failed' });
-  }
-};
-app.use(ensureDb);
+// Health & DB readiness
+const healthRoutes = require("./routes/health");
+const ensureDb = require("./middleware/ensureDb");
+app.use("/api", healthRoutes);
 
-// Quick health-check route
-app.get('/api/_health', (req, res) => {
-  return res.json({ status: 'ok' });
-});
+// All routes below require database connectivity — mount the ensureDb middleware
+app.use("/api", ensureDb);
 
 // API routes
 app.use("/api/users", userRoutes);
