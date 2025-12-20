@@ -43,6 +43,12 @@ app.use("/api/admin/users", adminRoutes);
 app.use("/api/admin/products", productAdminRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
 
+// Simple root route to confirm deployment (useful for backend project domains)
+// This returns a small JSON message instead of 404 when invoked at the root.
+app.get("/", (req, res) => {
+  return res.json({ ok: true, message: "backend root: deployed", timestamp: new Date().toISOString() });
+});
+
 // Serve frontend in production and fallback to index.html for SPA routing
 if (process.env.NODE_ENV === "production") {
   const frontendDist = path.join(__dirname, "..", "frontend", "dist");

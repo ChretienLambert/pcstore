@@ -8,6 +8,9 @@
     ],
     "routes": [
       { "src": "/api/(.*)", "dest": "server.js" },
-      { "src": "/api", "dest": "server.js" }
+      { "src": "/api", "dest": "server.js" },
+      { "src": "^/$", "dest": "server.js" },
+      { "src": "^/favicon.png$", "dest": "server.js" },
+      { "src": "^/favicon.ico$", "dest": "server.js" }
     ]
 }
