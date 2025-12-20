@@ -1,5 +1,5 @@
 const express = require("express");
-const User = require("../models/User");
+const User = require("../models/user");
 const jwt = require("jsonwebtoken");
 
 // Replace the tolerant import with named import that matches middleware export
