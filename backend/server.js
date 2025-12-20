@@ -50,6 +50,10 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Only start the server when this file is run directly (e.g. `node server.js`).
+// In serverless environments (Vercel), the module is imported and should NOT call `listen()`.
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
 
 module.exports = app;
