@@ -10,10 +10,15 @@ router.get("/_health", async (req, res) => {
     await connectDB();
     return res.json({ ok: true, db: "ok" });
   } catch (err) {
-    // If DB connect fails, still respond with 200 for readiness checks depending on your needs,
-    // but here we return 503 to indicate degraded service.
+    // If DB connect fails, still respond with 503 to indicate degraded service.
     return res.status(503).json({ ok: false, db: "down", error: err.message });
   }
+});
+
+// Lightweight public ping endpoint — small JSON response confirming the backend is deployed.
+// Note: project-level Vercel Authentication may still block access if enabled.
+router.get("/ping", (req, res) => {
+  return res.json({ ok: true, message: "backend reachable", timestamp: new Date().toISOString() });
 });
 
 module.exports = router;
