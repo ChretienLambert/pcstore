@@ -1,3 +1,35 @@
+// Instrument path-to-regexp to capture malformed patterns at runtime (helps Vercel debugging)
+try {
+  const ptr = require('path-to-regexp');
+  // wrap parse to log inputs that cause errors
+  if (ptr && typeof ptr.parse === 'function') {
+    const origParse = ptr.parse;
+    ptr.parse = function (str) {
+      try {
+        return origParse.apply(this, arguments);
+      } catch (err) {
+        console.error('path-to-regexp parse error. input:', String(str));
+        throw err;
+      }
+    };
+  }
+  // wrap name to show token name errors
+  if (ptr && typeof ptr.name === 'function') {
+    const origName = ptr.name;
+    ptr.name = function () {
+      try {
+        return origName.apply(this, arguments);
+      } catch (err) {
+        console.error('path-to-regexp name parse error. arguments:', arguments);
+        throw err;
+      }
+    };
+  }
+} catch (e) {
+  // best-effort; not fatal if path-to-regexp isn't present at this time
+  // console.warn('Failed to instrument path-to-regexp:', e && e.message);
+}
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -17,7 +49,30 @@ const adminOrderRoutes = require("./routes/adminOrderRoutes");
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      process.env.FRONTEND_BASE_URL
+    ].filter(Boolean); // Remove undefined values
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -66,7 +121,20 @@ const PORT = process.env.PORT || 5000;
 // Only start the server when this file is run directly (e.g. `node server.js`).
 // In serverless environments (Vercel), the module is imported and should NOT call `listen()`.
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  // Connect to database and start server
+  connectDB()
+    .then(() => {
+      console.log(`🚀 Server starting on port ${PORT}`);
+      app.listen(PORT, () => {
+        console.log(`✅ Server running on port ${PORT}`);
+        console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`📡 API endpoints available at http://localhost:${PORT}/api`);
+      });
+    })
+    .catch((error) => {
+      console.error('❌ Failed to connect to database:', error.message);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

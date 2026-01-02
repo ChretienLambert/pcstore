@@ -8,7 +8,8 @@ const { getConnected } = require("../middleware/ensureDb");
 router.get("/_health", async (req, res) => {
   try {
     await connectDB();
-    return res.json({ ok: true, db: "ok" });
+    // Provide a clear success message when DB is reachable.
+    return res.json({ ok: true, db: "ok", message: "MongoDB connected successfully" });
   } catch (err) {
     // If DB connect fails, still respond with 503 to indicate degraded service.
     return res.status(503).json({ ok: false, db: "down", error: err.message });

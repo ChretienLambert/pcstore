@@ -20,7 +20,9 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 30000,
     });
 
-    console.log('MongoDB connected successfully');
+    console.log(`✅ MongoDB connected successfully to ${mongoose.connection.name} database`);
+    console.log(`📍 Database host: ${mongoose.connection.host}`);
+    console.log(`🔌 Connection state: ${mongoose.connection.readyState} (1 = connected)`);
   } catch (error) {
     console.error('MongoDB connection failed:', error.message);
     // Do not call process.exit in serverless environments; rethrow so the caller can handle it
