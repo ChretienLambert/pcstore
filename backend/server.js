@@ -86,7 +86,7 @@ const adminOrderRoutes = require("./routes/adminOrderRoutes");
 
 dotenv.config();
 
-const app = express();
+app = express();
 
 // CORS configuration
 const corsOptions = {
