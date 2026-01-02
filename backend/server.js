@@ -196,9 +196,15 @@ try {
 }
 
 // Simple root route to confirm deployment (useful for backend project domains)
-// This returns a small JSON message instead of 404 when invoked at the root.
+// If initialization completed successfully, return a simple success string so the
+// frontend can quickly check overall service health.
 app.get("/", (req, res) => {
-  return res.json({ ok: true, message: "backend root: deployed", timestamp: new Date().toISOString() });
+  if (global.__initError) {
+    // If there was an initialization error, return 500 with diagnostic info
+    return res.status(500).json({ ok: false, message: 'Backend initialization error', error: String(global.__initError && (global.__initError.stack || global.__initError.message || global.__initError)) });
+  }
+  // Healthy: return plain text for simple detection
+  res.type('text/plain').send('Backend Working perfectly');
 });
 
 // Serve frontend in production and fallback to index.html for SPA routing
