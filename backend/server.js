@@ -114,6 +114,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Early root/status endpoint (registered before any risky initialization) so it
+// always returns a simple plain-text status suitable for checks.
+app.get('/', (req, res) => {
+  if (global.__initError) {
+    return res.status(500).type('text/plain').send('Backend is not working check the logs messages');
+  }
+  return res.type('text/plain').send('Backend Working perfectly');
+});
+
 // Early init-guard: if a route registration error occurs, set global.__initError
 // and respond with a friendly 500 for normal requests while still allowing
 // the `/__dump_router` debug endpoint to be used (header-gated below).
