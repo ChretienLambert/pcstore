@@ -202,7 +202,9 @@ app.get("/", (req, res) => {
 if (process.env.NODE_ENV === "production") {
   const frontendDist = path.join(__dirname, "..", "frontend", "dist");
   app.use(express.static(frontendDist));
-  app.get("*", (req, res) => {
+  // Use a regex-based fallback instead of the string '*' which can cause
+  // path-to-regexp v8 to attempt to parse an unnamed wildcard token and throw.
+  app.get(/.*/, (req, res) => {
     // if request is not an API call, serve index.html so client-side routing works
     if (req.path.startsWith("/api/")) {
       return res.status(404).json({ message: "API route not found" });
@@ -229,6 +231,7 @@ if (require.main === module) {
       console.error('❌ Failed to connect to database:', error.message);
       process.exit(1);
     });
+}
 } catch (err) {
   console.error('Top-level initialization error:', err && (err.stack || err.message));
   // create a minimal fallback app so the function responds with diagnostics instead of crashing
