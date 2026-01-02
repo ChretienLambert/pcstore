@@ -110,27 +110,45 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health & DB readiness
-const healthRoutes = require("./routes/health");
-const ensureDb = require("./middleware/ensureDb");
-app.use("/api", healthRoutes);
+// Early init-guard: if a route registration error occurs, set global.__initError
+// and respond with a friendly 500 for normal requests while still allowing
+// the `/__dump_router` debug endpoint to be used (header-gated below).
+app.use((req, res, next) => {
+  if (global.__initError) {
+    if (req.path === '/__dump_router' || process.env.VERBOSE_ROUTER) return next();
+    return res.status(500).json({ ok: false, message: 'server initialization failed' });
+  }
+  next();
+});
 
-// All routes below require database connectivity — mount the ensureDb middleware
-app.use("/api", ensureDb);
+// Register routes in a try/catch to prevent initialization-time throws from
+// crashing the function — capture any error in `global.__initError` for diagnostics.
+try {
+  // Health & DB readiness
+  const healthRoutes = require("./routes/health");
+  const ensureDb = require("./middleware/ensureDb");
+  app.use("/api", healthRoutes);
 
-// API routes
-app.use("/api/users", userRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/checkout", checkoutRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/subscribe", subscribeRoutes);
+  // All routes below require database connectivity — mount the ensureDb middleware
+  app.use("/api", ensureDb);
 
-// Admin
-app.use("/api/admin/users", adminRoutes);
-app.use("/api/admin/products", productAdminRoutes);
-app.use("/api/admin/orders", adminOrderRoutes);
+  // API routes
+  app.use("/api/users", userRoutes);
+  app.use("/api/products", productRoutes);
+  app.use("/api/cart", cartRoutes);
+  app.use("/api/checkout", checkoutRoutes);
+  app.use("/api/orders", orderRoutes);
+  app.use("/api/upload", uploadRoutes);
+  app.use("/api/subscribe", subscribeRoutes);
+
+  // Admin
+  app.use("/api/admin/users", adminRoutes);
+  app.use("/api/admin/products", productAdminRoutes);
+  app.use("/api/admin/orders", adminOrderRoutes);
+} catch (err) {
+  console.error('Error during route registration:', err && (err.stack || err.message));
+  global.__initError = err;
+}
 
 // Diagnostic: dump router stack to logs at startup (helps identify malformed layer paths)
 try {
