@@ -1,26 +1,60 @@
 // Instrument path-to-regexp to capture malformed patterns at runtime (helps Vercel debugging)
 try {
   const ptr = require('path-to-regexp');
-  // wrap parse to log inputs that cause errors
+  // wrap parse to log inputs that cause errors (note: internal module uses local parse/name, so this may not catch internal throws)
   if (ptr && typeof ptr.parse === 'function') {
     const origParse = ptr.parse;
     ptr.parse = function (str) {
       try {
         return origParse.apply(this, arguments);
       } catch (err) {
-        console.error('path-to-regexp parse error. input:', String(str));
+        try { console.error('path-to-regexp parse error. input:', String(str)); } catch(e){}
         throw err;
       }
     };
   }
-  // wrap name to show token name errors
+  // wrap name to show token name errors (best-effort)
   if (ptr && typeof ptr.name === 'function') {
     const origName = ptr.name;
     ptr.name = function () {
       try {
         return origName.apply(this, arguments);
       } catch (err) {
-        console.error('path-to-regexp name parse error. arguments:', arguments);
+        try { console.error('path-to-regexp name parse error. arguments:', arguments); } catch(e){}
+        throw err;
+      }
+    };
+  }
+  // wrap exported pathToRegexp/match/compile to catch and log the path argument when internal parse throws
+  if (ptr && typeof ptr.pathToRegexp === 'function') {
+    const origPathToRegexp = ptr.pathToRegexp;
+    ptr.pathToRegexp = function (p, options) {
+      try {
+        return origPathToRegexp.apply(this, arguments);
+      } catch (err) {
+        try { console.error('path-to-regexp pathToRegexp error. path arg:', p, 'type:', typeof p); } catch(e){}
+        throw err;
+      }
+    };
+  }
+  if (ptr && typeof ptr.match === 'function') {
+    const origMatch = ptr.match;
+    ptr.match = function (p, options) {
+      try {
+        return origMatch.apply(this, arguments);
+      } catch (err) {
+        try { console.error('path-to-regexp match error. path arg:', p, 'type:', typeof p); } catch(e){}
+        throw err;
+      }
+    };
+  }
+  if (ptr && typeof ptr.compile === 'function') {
+    const origCompile = ptr.compile;
+    ptr.compile = function (p, options) {
+      try {
+        return origCompile.apply(this, arguments);
+      } catch (err) {
+        try { console.error('path-to-regexp compile error. path arg:', p, 'type:', typeof p); } catch(e){}
         throw err;
       }
     };
@@ -98,6 +132,47 @@ app.use("/api/admin/users", adminRoutes);
 app.use("/api/admin/products", productAdminRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
 
+// Diagnostic: dump router stack to logs at startup (helps identify malformed layer paths)
+try {
+  const dumpStack = (note) => {
+    try {
+      console.error('--- ROUTER STACK DUMP START ---', note || '');
+      const stack = app && app._router && app._router.stack;
+      if (!stack) {
+        console.error('No router stack available');
+        return;
+      }
+      stack.forEach((layer, idx) => {
+        try {
+          const info = {
+            idx,
+            name: layer && layer.name,
+            routePath: layer.route && layer.route.path,
+            routeStack: layer.route && (layer.route.stack || []).map(s => ({ name: s.handle && s.handle.name, method: s.method })),
+            regexp: layer && layer.regexp && layer.regexp.toString && layer.regexp.toString(),
+            keys: layer && layer.keys,
+            handleName: layer && layer.handle && layer.handle.name,
+          };
+          console.error(JSON.stringify(info));
+        } catch (e) {
+          console.error('Error dumping layer', idx, e && e.message);
+        }
+      });
+      console.error('--- ROUTER STACK DUMP END ---');
+    } catch (e) {
+      console.error('Failed to dump router stack', e && e.message);
+    }
+  };
+  // Only dump for production or when VERBOSE_ROUTER is set
+  if (process.env.NODE_ENV === 'production' || process.env.VERBOSE_ROUTER) {
+    dumpStack('startup');
+  }
+  // attach for later debugging in uncaughtException handler
+  global.__dumpRouterStack = dumpStack;
+} catch (e) {
+  // swallow
+}
+
 // Simple root route to confirm deployment (useful for backend project domains)
 // This returns a small JSON message instead of 404 when invoked at the root.
 app.get("/", (req, res) => {
@@ -136,5 +211,29 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+
+// Global error handlers to capture uncaught exceptions and promise rejections and dump router stack for debugging
+process.on('uncaughtException', (err) => {
+  try {
+    console.error('UNCAUGHT EXCEPTION:', err && (err.stack || err.message || err));
+    if (typeof global.__dumpRouterStack === 'function') {
+      try { global.__dumpRouterStack('uncaughtException'); } catch (e) { console.error('dump stack failed', e && e.message); }
+    }
+  } catch (e) {
+    console.error('Error while handling uncaughtException', e && e.message);
+  }
+  // rethrow to allow process to exit with non-zero code in serverless
+  throw err;
+});
+process.on('unhandledRejection', (reason, p) => {
+  try {
+    console.error('UNHANDLED REJECTION at:', p, 'reason:', reason && (reason.stack || reason));
+    if (typeof global.__dumpRouterStack === 'function') {
+      try { global.__dumpRouterStack('unhandledRejection'); } catch (e) { console.error('dump stack failed', e && e.message); }
+    }
+  } catch (e) {
+    console.error('Error while handling unhandledRejection', e && e.message);
+  }
+});
 
 module.exports = app;
