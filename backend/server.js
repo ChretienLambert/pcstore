@@ -273,31 +273,47 @@ process.on('unhandledRejection', (reason, p) => {
 // Temporary debug endpoint: return a simplified dump of the Express router stack when
 // the request carries the Vercel protection bypass header (preview-protected deployments)
 // or when VERBOSE_ROUTER is set in env. This avoids needing Vercel CLI log access.
-app.get('/__dump_router', (req, res) => {
-  const bypassHeader = req.get('x-vercel-protection-bypass');
-  if (!bypassHeader && !process.env.VERBOSE_ROUTER) {
-    return res.status(403).json({ ok: false, message: 'forbidden' });
-  }
+if (typeof app !== 'undefined' && app && typeof app.get === 'function') {
+  app.get('/__dump_router', (req, res) => {
+    const bypassHeader = req.get('x-vercel-protection-bypass');
+    if (!bypassHeader && !process.env.VERBOSE_ROUTER) {
+      return res.status(403).json({ ok: false, message: 'forbidden' });
+    }
+    try {
+      const stack = (app && app._router && app._router.stack) || [];
+      const simplified = stack.map((layer, idx) => {
+        try {
+          return {
+            idx,
+            name: layer && layer.name,
+            mount: layer && layer.regexp && layer.regexp.toString && layer.regexp.toString(),
+            routePath: layer && layer.route && layer.route.path,
+            routeMethods: layer && layer.route && layer.route.methods,
+            keys: layer && layer.keys,
+          };
+        } catch (e) {
+          return { idx, error: e && e.message };
+        }
+      });
+      return res.json({ ok: true, stack: simplified });
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: String(err && err.message) });
+    }
+  });
+} else {
+  // If `app` is missing at this point (module init failed earlier), export a minimal
+  // fallback app that exposes `/__dump_router` to return the initialization error.
   try {
-    const stack = (app && app._router && app._router.stack) || [];
-    const simplified = stack.map((layer, idx) => {
-      try {
-        return {
-          idx,
-          name: layer && layer.name,
-          mount: layer && layer.regexp && layer.regexp.toString && layer.regexp.toString(),
-          routePath: layer && layer.route && layer.route.path,
-          routeMethods: layer && layer.route && layer.route.methods,
-          keys: layer && layer.keys,
-        };
-      } catch (e) {
-        return { idx, error: e && e.message };
-      }
-    });
-    return res.json({ ok: true, stack: simplified });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: String(err && err.message) });
+    const express = require('express');
+    const fallback = express();
+    fallback.get('/__dump_router', (req, res) => res.status(500).json({ ok: false, message: 'app not initialized', initError: String(global.__initError && (global.__initError.stack || global.__initError.message || global.__initError)) }));
+    module.exports = fallback;
+    // stop further module evaluation
+    return;
+  } catch (e) {
+    // If we can't construct even the fallback, let the module continue and fail loudly
+    // so Vercel logs provide the stack trace.
   }
-});
+}
 
 module.exports = app;
