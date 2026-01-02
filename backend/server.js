@@ -64,6 +64,9 @@ try {
   // console.warn('Failed to instrument path-to-regexp:', e && e.message);
 }
 
+// Ensure `app` is declared in module scope so later code can safely reference it
+let app;
+
 try {
 const express = require("express");
 const cors = require("cors");
