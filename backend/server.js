@@ -64,6 +64,7 @@ try {
   // console.warn('Failed to instrument path-to-regexp:', e && e.message);
 }
 
+try {
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -228,6 +229,18 @@ if (require.main === module) {
       console.error('❌ Failed to connect to database:', error.message);
       process.exit(1);
     });
+} catch (err) {
+  console.error('Top-level initialization error:', err && (err.stack || err.message));
+  // create a minimal fallback app so the function responds with diagnostics instead of crashing
+  const express = require('express');
+  const fallback = express();
+  fallback.get('/__dump_router', (req, res) => {
+    return res.status(500).json({ ok: false, error: String(err && (err.stack || err.message)) });
+  });
+  fallback.use((req, res) => res.status(500).json({ ok: false, message: 'server module initialization failed', error: String(err && (err.stack || err.message)) }));
+  module.exports = fallback;
+  // stop further execution of this module
+  return;
 }
 
 // Global error handlers to capture uncaught exceptions and promise rejections and dump router stack for debugging
